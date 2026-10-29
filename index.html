@@ -1,0 +1,1087 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Flowchart Forge</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* layout concept: single centered vertical "workbench" column — scenario, flowchart canvas, symbol tray stack top to bottom, same on phone and desktop */
+:root{
+  --bg:#F5F6FB; --surface:#FFFFFF; --surface-2:#ECEEF6;
+  --fg:#161925; --fg-muted:#5B6077; --line:#CDD1E0;
+  --accent:#3450C9; --accent-rgb:52,80,201; --accent-fg:#FFFFFF;
+  --chip-bg:#EDE9FF; --chip-fg:#4B3FA0;
+  --success:#1E8E5A; --success-bg:#E3F6EC;
+  --danger:#C83F3F; --danger-bg:#FBEAEA;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13151E; --surface:#1B1E2A; --surface-2:#232738;
+    --fg:#EDEFF6; --fg-muted:#9CA1B8; --line:#383D52;
+    --accent:#8097FF; --accent-rgb:128,151,255; --accent-fg:#101225;
+    --chip-bg:#2A2650; --chip-fg:#C9BFFF;
+    --success:#4FCB8E; --success-bg:#123326;
+    --danger:#FF8A80; --danger-bg:#3A1A1A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13151E; --surface:#1B1E2A; --surface-2:#232738;
+  --fg:#EDEFF6; --fg-muted:#9CA1B8; --line:#383D52;
+  --accent:#8097FF; --accent-rgb:128,151,255; --accent-fg:#101225;
+  --chip-bg:#2A2650; --chip-fg:#C9BFFF;
+  --success:#4FCB8E; --success-bg:#123326;
+  --danger:#FF8A80; --danger-bg:#3A1A1A;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+}
+
+/* dashboard shell: fixed-width level sidebar, a scenario card and board stacked in
+   the flexible middle column, fixed-width symbols sidebar spanning both their rows.
+   On narrow screens it collapses to one stacked column, reordered so the scenario
+   card sits right above the symbol palette, and the palette right above the board
+   it feeds — not sidebar/main/symbols in DOM order. */
+.layout{
+  display:grid;
+  grid-template-columns:272px 1fr 320px;
+  grid-template-areas:
+    "sidebar scenario symbols"
+    "sidebar board    symbols";
+  gap:28px; align-items:start;
+  max-width:1240px; margin:0 auto;
+  padding-block:28px 20px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+@media (max-width:920px){
+  .layout{
+    grid-template-columns:1fr;
+    grid-template-areas:"sidebar" "scenario" "symbols" "board";
+    gap:22px;
+  }
+}
+.panel-sidebar{ grid-area:sidebar; min-width:0; }
+.scenario{ grid-area:scenario; min-width:0; }
+.panel-symbols{ grid-area:symbols; min-width:0; }
+.panel-board{ grid-area:board; min-width:0; }
+
+/* sidebar */
+.kicker{ font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); }
+h1{ font:700 30px/1.15 'IBM Plex Sans',sans-serif; margin:.35em 0 .22em; letter-spacing:-.01em; }
+.sub{ color:var(--fg-muted); font-size:14px; line-height:1.5; margin:0; }
+
+/* level tabs — full-width rows stacked down the sidebar on desktop; a horizontal
+   scrolling chip strip with prev/next arrows on narrow screens (see breakpoint below) */
+.tabs-carousel{ display:flex; align-items:center; gap:8px; margin-top:22px; }
+.tabs{ display:flex; flex-direction:column; gap:10px; min-width:0; flex:1; }
+.tab{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:13px 15px; border-radius:12px; border:2px solid var(--line);
+  background:var(--surface); font:600 14.5px/1.3 'IBM Plex Sans',sans-serif; color:var(--fg);
+  cursor:pointer; text-align:left; -webkit-appearance:none;
+}
+.tab--active{ border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-rgb),.08); }
+.tab--locked{ opacity:.45; cursor:not-allowed; }
+.tab-num{ font:600 12px/1 'IBM Plex Mono',monospace; opacity:.7; flex:0 0 auto; }
+.tab-title{ flex:1; min-width:0; }
+.tab-check{ color:var(--success); font-weight:700; flex:0 0 auto; }
+.tab-lock{ display:inline-flex; color:var(--fg-muted); flex:0 0 auto; }
+.tab:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+.tabs-arrow{
+  display:none; flex:0 0 auto; width:34px; height:34px; border-radius:999px;
+  border:1.5px solid var(--line); background:var(--surface); color:var(--fg);
+  font-size:17px; line-height:1; cursor:pointer; align-items:center; justify-content:center;
+  padding:0; -webkit-appearance:none;
+}
+.tabs-arrow:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+
+@media (max-width:920px){
+  .tabs-arrow{ display:flex; }
+  .tabs{
+    flex-direction:row; gap:8px; overflow-x:auto; scroll-behavior:smooth;
+    scrollbar-width:none; padding-block:2px;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{ flex:0 0 auto; width:auto; padding:10px 16px; border-radius:999px; white-space:nowrap; }
+  .tab-title{ flex:0 0 auto; }
+}
+
+/* legend (now lives in the symbols sidebar) */
+details.legend{ margin-top:0; }
+details.legend summary{
+  cursor:pointer; font:600 12.5px/1 'IBM Plex Mono',monospace; color:var(--fg-muted);
+  list-style:none; display:flex; align-items:center; gap:7px; letter-spacing:.03em;
+  text-transform:uppercase; -webkit-appearance:none;
+}
+details.legend summary::-webkit-details-marker{ display:none; }
+details.legend summary::before{ content:'▸'; display:inline-block; transition:transform .15s; color:var(--accent); }
+details.legend[open] summary::before{ transform:rotate(90deg); }
+.legend-row{ display:flex; flex-wrap:wrap; gap:10px; padding:12px 2px 4px; }
+.legend-chip{ flex:0 0 auto; }
+.sym--mini{ transform:scale(.7); transform-origin:center; }
+
+/* scenario card */
+.scenario{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:18px 20px;
+}
+.scenario h2{ font:700 20px/1.3 'IBM Plex Sans',sans-serif; margin:0 0 9px; }
+.scenario p{ margin:0; font-size:14.5px; line-height:1.55; color:var(--fg); }
+.instruction{
+  margin-top:9px !important; font-size:12.5px !important; color:var(--fg-muted) !important;
+  font-family:'IBM Plex Mono',monospace; line-height:1.5 !important;
+}
+
+/* shared symbol shapes (used as both pieces and slots) — width:min(Npx,100%) so the
+   same shape class fills a column when used as a slot and sizes itself when used
+   as a wrapping palette piece, shrinking cleanly at phone width either way */
+.sym{
+  position:relative; background:var(--surface); border:2px solid var(--line);
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  user-select:none; transition:border-color .15s, background-color .15s, transform .1s;
+}
+.sym-text{ font:500 12.5px/1.3 'IBM Plex Sans',sans-serif; }
+.sym-terminator{ width:min(142px,100%); min-height:44px; border-radius:999px; padding:8px 14px; }
+.sym-process{ width:min(208px,100%); min-height:50px; border-radius:10px; padding:10px 14px; }
+.sym-io{ width:min(208px,100%); min-height:50px; clip-path:polygon(16% 0,100% 0,84% 100%,0 100%); padding:10px 32px; }
+.sym-decision{ width:min(208px,100%); height:98px; clip-path:polygon(50% 4%,96% 50%,50% 96%,4% 50%); }
+.sym-decision .sym-text{ font-size:11.5px; max-width:68%; }
+.sym-empty{ width:min(190px,100%); min-height:50px; border-radius:10px; border-style:dashed; }
+
+.piece{ box-shadow:0 1px 2px rgba(0,0,0,.06); cursor:grab; touch-action:none; }
+.piece--dragging{ opacity:.3; }
+.ghost{ z-index:999; cursor:grabbing; box-shadow:0 10px 26px rgba(0,0,0,.2); pointer-events:none; }
+body.is-dragging{ cursor:grabbing; }
+
+.slot{ cursor:default; }
+.slot--filled{ background:rgba(var(--accent-rgb),.07); }
+.slot--hover{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(var(--accent-rgb),.18); }
+.slot-placeholder{ color:var(--line); font-size:17px; font-weight:300; }
+.piece:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+
+.remove-btn{
+  position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:999px;
+  background:var(--fg); color:var(--bg); border:none; font-size:12px; line-height:1;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+}
+
+/* dropdown-mode slots (levels 6, 7, 8, 10): shape and wording chosen separately */
+.dd-card{
+  display:flex; flex-direction:column; gap:6px; width:min(220px,100%);
+  background:var(--surface); border:2px solid var(--line); border-radius:10px;
+  padding:10px; transition:border-color .15s, background-color .15s;
+}
+.dd-card.slot--filled{ background:rgba(var(--accent-rgb),.07); }
+.dd-select{
+  width:100%; font:500 12.5px/1.3 'IBM Plex Sans',sans-serif; color:var(--fg);
+  background:var(--surface-2); border:1.5px solid var(--line); border-radius:7px;
+  padding:7px 8px; cursor:pointer;
+}
+.dd-select:focus-visible{ outline:3px solid var(--accent); outline-offset:1px; }
+
+.dd-dir{
+  margin-top:24px; font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.04em;
+  padding:4px 10px; border-radius:999px; background:var(--chip-bg); color:var(--chip-fg);
+  border:1.5px solid var(--line); cursor:pointer;
+}
+.nested-leg .dd-dir{ margin-top:0; }
+
+/* board + connectors */
+.board{ display:flex; flex-direction:column; align-items:center; }
+.connector{ width:2px; height:26px; background:var(--line); margin:0 auto; position:relative; }
+.connector::after{
+  content:''; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%);
+  border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--line);
+}
+.connector--short{ height:16px; }
+
+/* branch split (decision with two paths, both drawn as columns; a column's own
+   content may itself include a nested decision via .nested-fork, stacked vertically
+   so width never compounds no matter how deep the nesting goes) */
+.branch{ width:100%; max-width:340px; margin:0 auto; }
+.branch-stem{ width:2px; height:18px; background:var(--line); margin:0 auto; }
+.branch-row{ display:flex; border-top:2px solid var(--line); position:relative; }
+.branch-leg{ flex:1; display:flex; justify-content:center; position:relative; }
+.branch-leg::before{
+  content:''; position:absolute; top:0; left:50%; width:2px; height:16px; background:var(--line);
+}
+.branch-label{
+  margin-top:24px; font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.04em;
+  padding:4px 10px; border-radius:999px; background:var(--chip-bg); color:var(--chip-fg);
+}
+.branch-cols{ display:flex; gap:18px; margin-top:8px; align-items:flex-start; }
+.branch-col{ flex:1 1 150px; min-width:0; display:flex; flex-direction:column; align-items:center; gap:10px; }
+
+.nested-fork{ display:flex; flex-direction:column; gap:10px; margin-top:10px; width:100%; }
+.nested-leg{
+  display:flex; flex-direction:column; align-items:center; gap:8px; width:100%;
+  padding:12px 8px; border-radius:10px; border:1.5px dashed var(--line);
+}
+.nested-leg .branch-label{ margin-top:0; }
+
+/* decision with one side-exit while the trunk continues straight down — used for
+   long chains of independent checks (e.g. grade bands) so width never compounds */
+.spur{ display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:16px; width:100%; }
+.spur-trunk{ display:flex; flex-direction:column; align-items:center; gap:6px; flex:0 1 auto; min-width:0; }
+.spur-no-label{ font:600 10.5px/1 'IBM Plex Mono',monospace; color:var(--fg-muted); letter-spacing:.03em; }
+.spur-arm{
+  display:flex; flex-direction:column; align-items:center; gap:6px; flex:0 1 auto; min-width:0;
+  max-width:100%; padding:30px 0 0 14px; border-left:2px dashed var(--line);
+}
+.spur-yes-label{
+  font:600 10.5px/1 'IBM Plex Mono',monospace; color:var(--chip-fg); background:var(--chip-bg);
+  padding:3px 9px; border-radius:999px;
+}
+.spur-arm-body{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+
+.loop-badge{
+  margin-top:2px; font:500 10.5px/1.3 'IBM Plex Mono',monospace; color:var(--accent);
+  border:1px dashed var(--accent); border-radius:999px; padding:4px 10px; text-align:center;
+}
+
+/* palette */
+.palette-label{
+  margin-top:20px; font:600 12px/1 'IBM Plex Mono',monospace; letter-spacing:.05em;
+  color:var(--fg-muted); text-transform:uppercase;
+}
+.palette{
+  display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; padding:14px;
+  background:var(--surface-2); border-radius:14px; min-height:62px;
+}
+
+/* controls + feedback */
+.controls{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+.btn{
+  font:600 14px/1 'IBM Plex Sans',sans-serif; padding:12px 18px; border-radius:10px;
+  border:2px solid transparent; cursor:pointer; -webkit-appearance:none;
+}
+.btn-primary{ background:var(--accent); color:var(--accent-fg); }
+.btn-ghost{ background:transparent; border-color:var(--line); color:var(--fg); }
+.btn:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+.feedback{ margin-top:14px; padding:12px 16px; border-radius:10px; font-size:13.5px; font-weight:500; }
+.feedback:empty{ display:none; padding:0; margin:0; }
+.feedback--success{ background:var(--success-bg); color:var(--success); }
+.feedback--warn{ background:var(--danger-bg); color:var(--danger); }
+
+footer{
+  max-width:1240px; margin:8px auto 40px; font-size:12px; color:var(--fg-muted); line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+</style>
+
+<div class="layout" id="layout">
+  <aside class="panel-sidebar">
+    <div class="kicker">IKALPRO Lab · Session 6</div>
+    <h1>Flowchart Forge</h1>
+    <p class="sub">Drag symbols into place to build each program's logic — 10 levels, easy to expert. Clear a level correctly to unlock the next.</p>
+    <div class="tabs-carousel">
+      <button class="tabs-arrow" id="tabsPrev" type="button" aria-label="Scroll to previous levels">‹</button>
+      <nav class="tabs" id="levelTabs"></nav>
+      <button class="tabs-arrow" id="tabsNext" type="button" aria-label="Scroll to next levels">›</button>
+    </div>
+  </aside>
+
+  <section class="scenario">
+    <h2 id="levelTitleText"></h2>
+    <p id="scenarioText"></p>
+    <p class="instruction" id="instructionText">Drag symbols into the slots, then put them in the right order. Some pieces are decoys: matching wording in the wrong shape, or a tempting wrong number. Click “Check Flow” to verify.</p>
+  </section>
+
+  <aside class="panel-symbols">
+    <details class="legend" id="legend">
+      <summary>Symbol reference</summary>
+      <div class="legend-row" id="legendRow"></div>
+    </details>
+
+    <div class="palette-label" id="paletteLabel">Symbols</div>
+    <div class="palette" id="palette"></div>
+  </aside>
+
+  <main class="panel-board">
+    <div class="board" id="board"></div>
+
+    <div class="controls">
+      <button class="btn btn-primary" id="checkBtn">Check Flow</button>
+      <button class="btn btn-ghost" id="resetBtn">Reset</button>
+    </div>
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+  </main>
+</div>
+
+<footer>Built for the Computer Science &amp; Programming Algorithms Lab — Flowchart module, Session 6.</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var SYMBOLS = [
+    {shape:'terminator', label:'Terminator'},
+    {shape:'io',         label:'Input/Output'},
+    {shape:'process',    label:'Process'},
+    {shape:'decision',   label:'Decision'}
+  ];
+
+  var LEVELS = [
+    { key:'lvl1', title:'Rectangle Area', badge:'Level 1 · Sequence',
+      scenario:'This program computes the area of a rectangle from a length and width the user enters.',
+      steps:[
+        {id:'a1', shape:'terminator', text:'Start'},
+        {id:'a2', shape:'io',         text:'Input length and width'},
+        {id:'a3', shape:'process',    text:'Compute area = length × width'},
+        {id:'a4', shape:'io',         text:'Display area'},
+        {id:'a5', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'a-d1', shape:'process', text:'Input length and width'},
+        {id:'a-d2', shape:'io',      text:'Compute area = length × width'},
+        {id:'a-d3', shape:'process', text:'Display area'},
+        {id:'a-d4', shape:'process', text:'Compute area = length + width'}
+      ],
+      layout:[ {row:'a1'},{row:'a2'},{row:'a3'},{row:'a4'},{row:'a5'} ]
+    },
+    { key:'lvl2', title:'Making Tea', badge:'Level 2 · Sequence',
+      scenario:'A student makes a cup of tea. Arrange the steps top to bottom — no branching, no repetition.',
+      steps:[
+        {id:'t1', shape:'terminator', text:'Start'},
+        {id:'t2', shape:'io',         text:'Input: cup, tea bag, hot water, sugar'},
+        {id:'t3', shape:'process',    text:'Place the tea bag in the cup'},
+        {id:'t4', shape:'process',    text:'Pour in hot water'},
+        {id:'t5', shape:'process',    text:'Stir well'},
+        {id:'t6', shape:'process',    text:'Add sugar to taste'},
+        {id:'t7', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'t-d1', shape:'io',          text:'Place the tea bag in the cup'},
+        {id:'t-d2', shape:'process',     text:'Input: cup, tea bag, hot water, sugar'},
+        {id:'t-d3', shape:'process',     text:'Pour in cold water'},
+        {id:'t-d4', shape:'terminator',  text:'Stir well'}
+      ],
+      layout:[ {row:'t1'},{row:'t2'},{row:'t3'},{row:'t4'},{row:'t5'},{row:'t6'},{row:'t7'} ]
+    },
+    { key:'lvl3', title:'Odd or Even', badge:'Level 3 · Selection',
+      scenario:'The program decides whether a number is odd or even.',
+      steps:[
+        {id:'e1', shape:'terminator', text:'Start'},
+        {id:'e2', shape:'io',         text:'Input a number'},
+        {id:'e3', shape:'decision',   text:'Divisible by 2?'},
+        {id:'e4', shape:'io',         text:"Display 'Odd'"},
+        {id:'e5', shape:'io',         text:"Display 'Even'"},
+        {id:'e6', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'e-d1', shape:'process',  text:'Divisible by 2?'},
+        {id:'e-d2', shape:'process',  text:'Input a number'},
+        {id:'e-d3', shape:'decision', text:"Display 'Odd'"},
+        {id:'e-d4', shape:'io',       text:"Display 'Neutral'"}
+      ],
+      layout:[
+        {row:'e1'},{row:'e2'},{row:'e3'},
+        {branch:{ left:{label:'No', entries:['e4']}, right:{label:'Yes', entries:['e5']} }},
+        {row:'e6'}
+      ]
+    },
+    { key:'lvl4', title:'Pass or Fail', badge:'Level 4 · Selection',
+      scenario:'The program determines pass/fail status from an exam score — passing requires at least 60.',
+      steps:[
+        {id:'f1', shape:'terminator', text:'Start'},
+        {id:'f2', shape:'io',         text:'Input exam score'},
+        {id:'f3', shape:'decision',   text:'Score >= 60 ?'},
+        {id:'f4', shape:'io',         text:"Display 'Fail'"},
+        {id:'f5', shape:'io',         text:"Display 'Pass'"},
+        {id:'f6', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'f-d1', shape:'process',  text:'Score >= 60 ?'},
+        {id:'f-d2', shape:'process',  text:'Input exam score'},
+        {id:'f-d3', shape:'decision', text:'Score > 60 ?'},
+        {id:'f-d4', shape:'io',       text:"Display 'Invalid Score'"}
+      ],
+      layout:[
+        {row:'f1'},{row:'f2'},{row:'f3'},
+        {branch:{ left:{label:'No', entries:['f4']}, right:{label:'Yes', entries:['f5']} }},
+        {row:'f6'}
+      ]
+    },
+    { key:'lvl5', title:'Exam Payment', badge:'Level 5 · Selection + Loop',
+      scenario:'The program decides whether a student may sit the exam, based on whether school fees are paid.',
+      steps:[
+        {id:'u1', shape:'terminator', text:'Start'},
+        {id:'u2', shape:'io',         text:'Input payment status'},
+        {id:'u3', shape:'decision',   text:'Has the student paid?'},
+        {id:'u4', shape:'process',    text:'Settle the payment first', loopTo:'u3'},
+        {id:'u5', shape:'process',    text:'Allowed to take the exam'},
+        {id:'u6', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'u-d1', shape:'process', text:'Has the student paid?'},
+        {id:'u-d2', shape:'process', text:'Input payment status'},
+        {id:'u-d3', shape:'process', text:'Cancel the exam'},
+        {id:'u-d4', shape:'process', text:'Print the payment receipt'}
+      ],
+      layout:[
+        {row:'u1'},{row:'u2'},{row:'u3'},
+        {branch:{ left:{label:'No', entries:['u4']}, right:{label:'Yes', entries:['u5','u6']} }}
+      ]
+    },
+    { key:'lvl6', title:'Password Check', badge:'Level 6 · Selection + Loop', mode:'dropdown',
+      scenario:'The program checks a password. If it is wrong, the user is asked to re-enter it until it is correct.',
+      steps:[
+        {id:'w1', shape:'terminator', text:'Start'},
+        {id:'w2', shape:'io',         text:'Input password'},
+        {id:'w3', shape:'decision',   text:'Is the password correct?'},
+        {id:'w4', shape:'process',    text:'Re-enter the password', loopTo:'w3'},
+        {id:'w5', shape:'process',    text:'Log into the system'},
+        {id:'w6', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'w-d1', shape:'process', text:'Is the password correct?'},
+        {id:'w-d2', shape:'process', text:'Input password'},
+        {id:'w-d3', shape:'process', text:'Lock the account'},
+        {id:'w-d4', shape:'process', text:'Show an error message'}
+      ],
+      layout:[
+        {row:'w1'},{row:'w2'},{row:'w3'},
+        {branch:{ left:{label:'No', entries:['w4']}, right:{label:'Yes', entries:['w5','w6']} }}
+      ]
+    },
+    { key:'lvl7', title:'Watering Plants', badge:'Level 7 · Iteration', mode:'dropdown',
+      scenario:'The program waters a plant exactly five times, using a counter to track how many times it has watered it.',
+      steps:[
+        {id:'p1', shape:'terminator', text:'Start'},
+        {id:'p2', shape:'process',    text:'Set Count = 1'},
+        {id:'p3', shape:'decision',   text:'Count < 5 ?'},
+        {id:'p4', shape:'terminator', text:'End'},
+        {id:'p5', shape:'process',    text:'Water the plant'},
+        {id:'p6', shape:'process',    text:'Count = Count + 1', loopTo:'p3'}
+      ],
+      decoys:[
+        {id:'p-d1', shape:'process',  text:'Count < 5 ?'},
+        {id:'p-d2', shape:'io',       text:'Set Count = 1'},
+        {id:'p-d3', shape:'decision', text:'Count <= 5 ?'},
+        {id:'p-d4', shape:'process',  text:'Set Count = 0'}
+      ],
+      layout:[
+        {row:'p1'},{row:'p2'},{row:'p3'},
+        {branch:{ left:{label:'No', entries:['p4']}, right:{label:'Yes', entries:['p5','p6']} }}
+      ]
+    },
+    { key:'lvl8', title:'Guess the Number', badge:'Level 8 · Repeat-Until Loop', mode:'dropdown',
+      scenario:'The program picks a secret number and keeps asking for a guess until the guess is correct. Unlike a counted loop, the body always runs at least once before the check.',
+      steps:[
+        {id:'s1', shape:'terminator', text:'Start'},
+        {id:'s2', shape:'io',         text:'Input the secret number'},
+        {id:'s3', shape:'io',         text:'Enter a guess'},
+        {id:'s4', shape:'decision',   text:'Guess == Secret Number?'},
+        {id:'s5', shape:'io',         text:"Display 'Correct!'"},
+        {id:'s6', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'s-d1', shape:'process',  text:'Enter a guess'},
+        {id:'s-d2', shape:'process',  text:'Guess == Secret Number?'},
+        {id:'s-d3', shape:'decision', text:'Guess > Secret Number?'},
+        {id:'s-d4', shape:'io',       text:"Display 'Try Again'"}
+      ],
+      layout:[
+        {row:'s1'},{row:'s2'},{row:'s3'},{row:'s4'},
+        {branch:{
+          left:{label:'No', entries:[], note:'↺ loops back to "Enter a guess"'},
+          right:{label:'Yes', entries:['s5','s6']}
+        }}
+      ]
+    },
+    { key:'lvl9', title:'Letter Grade', badge:'Level 9 · Chained Decisions',
+      scenario:'The program converts a score into a letter grade across five bands: A (90+), B (80+), C (70+), D (60+), otherwise F.',
+      steps:[
+        {id:'g1',  shape:'terminator', text:'Start'},
+        {id:'g2',  shape:'io',         text:'Input score'},
+        {id:'g3',  shape:'decision',   text:'Score >= 90 ?'},
+        {id:'g4',  shape:'process',    text:'Grade = A'},
+        {id:'g5',  shape:'decision',   text:'Score >= 80 ?'},
+        {id:'g6',  shape:'process',    text:'Grade = B'},
+        {id:'g7',  shape:'decision',   text:'Score >= 70 ?'},
+        {id:'g8',  shape:'process',    text:'Grade = C'},
+        {id:'g9',  shape:'decision',   text:'Score >= 60 ?'},
+        {id:'g10', shape:'process',    text:'Grade = D'},
+        {id:'g11', shape:'process',    text:'Grade = F'},
+        {id:'g12', shape:'io',         text:'Display Grade'},
+        {id:'g13', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'g-d1', shape:'process',  text:'Score >= 90 ?'},
+        {id:'g-d2', shape:'process',  text:'Score >= 70 ?'},
+        {id:'g-d3', shape:'decision', text:'Score >= 95 ?'},
+        {id:'g-d4', shape:'decision', text:'Score >= 65 ?'},
+        {id:'g-d5', shape:'process',  text:'Grade = E'},
+        {id:'g-d6', shape:'process',  text:'Grade = B+'}
+      ],
+      layout:[
+        {row:'g1'},{row:'g2'},
+        {spur:{ decisionId:'g3', armIds:['g4'] }},
+        {spur:{ decisionId:'g5', armIds:['g6'] }},
+        {spur:{ decisionId:'g7', armIds:['g8'] }},
+        {spur:{ decisionId:'g9', armIds:['g10'] }},
+        {row:'g11'},{row:'g12'},{row:'g13'}
+      ]
+    },
+    { key:'lvl10', title:'Movie Ticket Price', badge:'Level 10 · Nested Decisions', mode:'dropdown',
+      chooseBranch:true, branchDecisionIds:['j3','j7','j4'],
+      scenario:'The box office prices a ticket using two independent conditions: whether the customer is a student, and an age threshold that differs on each side. Two decisions must be nested, not just chained — and this time the branch labels themselves are not given.',
+      steps:[
+        {id:'j1',  shape:'terminator', text:'Start'},
+        {id:'j2',  shape:'io',         text:'Input age and student status'},
+        {id:'j3',  shape:'decision',   text:'Is the customer a student?'},
+        {id:'j4',  shape:'decision',   text:'Is the customer under 12?'},
+        {id:'j5',  shape:'process',    text:'Set Price = Free'},
+        {id:'j6',  shape:'process',    text:'Set Price = Student ($6)'},
+        {id:'j7',  shape:'decision',   text:'Is the customer 60 or older?'},
+        {id:'j8',  shape:'process',    text:'Set Price = Regular ($12)'},
+        {id:'j9',  shape:'process',    text:'Set Price = Senior ($8)'},
+        {id:'j10', shape:'io',         text:'Display Price'},
+        {id:'j11', shape:'terminator', text:'End'}
+      ],
+      decoys:[
+        {id:'j-d1', shape:'process',  text:'Is the customer a student?'},
+        {id:'j-d2', shape:'process',  text:'Is the customer under 12?'},
+        {id:'j-d3', shape:'decision', text:'Is the customer under 13?'},
+        {id:'j-d4', shape:'decision', text:'Is the customer 65 or older?'},
+        {id:'j-d5', shape:'process',  text:'Set Price = Regular ($15)'},
+        {id:'j-d6', shape:'process',  text:'Set Price = Student ($5)'}
+      ],
+      layout:[
+        {row:'j1'},{row:'j2'},{row:'j3'},
+        {branch:{ decisionId:'j3',
+          left:{label:'No (not a student)', entries:[
+            {decision:{ id:'j7', leftLabel:'No (under 60)', rightLabel:'Yes (60+)', left:{entries:['j8']}, right:{entries:['j9']} }}
+          ]},
+          right:{label:'Yes (student)', entries:[
+            {decision:{ id:'j4', leftLabel:'No', rightLabel:'Yes (under 12)', left:{entries:['j6']}, right:{entries:['j5']} }}
+          ]}
+        }},
+        {row:'j10'},{row:'j11'}
+      ]
+    }
+  ];
+
+  var SHAPE_CLASS = { terminator:'sym-terminator', process:'sym-process', io:'sym-io', decision:'sym-decision' };
+  function shapeClass(s){ return SHAPE_CLASS[s] || 'sym-process'; }
+
+  var LOCK_SVG = '<svg class="lock-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+  var currentIndex = 0;
+  var state = {};
+  var shuffleCache = {};
+  var ddTextCache = {};
+  var completed = {};
+  try{
+    var saved = JSON.parse(localStorage.getItem('flowforge_completed_v1') || '[]');
+    saved.forEach(function(k){ completed[k] = true; });
+  }catch(e){}
+
+  function getState(key){
+    if(!state[key]) state[key] = { placements:{}, ddSel:{}, branchSel:{} };
+    return state[key];
+  }
+
+  function isUnlocked(i){
+    if(i === 0) return true;
+    return !!completed[LEVELS[i-1].key];
+  }
+
+  function findItem(level, id){
+    var hit = level.steps.filter(function(s){ return s.id===id; })[0];
+    if(hit) return hit;
+    if(level.decoys){ hit = level.decoys.filter(function(s){ return s.id===id; })[0]; }
+    return hit;
+  }
+
+  function findStep(level, id){
+    return level.steps.filter(function(s){ return s.id===id; })[0];
+  }
+
+  function shuffledList(list, key){
+    if(!shuffleCache[key]){
+      var ids = list.map(function(x){ return x.id; });
+      for(var i=ids.length-1;i>0;i--){
+        var j = Math.floor(Math.random()*(i+1));
+        var tmp = ids[i]; ids[i]=ids[j]; ids[j]=tmp;
+      }
+      shuffleCache[key] = ids;
+    }
+    var order = shuffleCache[key];
+    return order.map(function(id){ return list.filter(function(x){return x.id===id;})[0]; });
+  }
+
+  function esc(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function pieceHTML(item){
+    return '<div class="sym '+shapeClass(item.shape)+' piece" data-piece="'+item.id+'" tabindex="0">'+
+      '<span class="sym-text">'+esc(item.text)+'</span></div>';
+  }
+
+  function slotHTML(step, level, st){
+    var placedId = st.placements[step.id];
+    var filledClass = placedId ? ' slot--filled' : '';
+    var cls, inner;
+    if(placedId){
+      var placedItem = findItem(level, placedId);
+      cls = shapeClass(placedItem.shape);
+      inner = '<span class="sym-text">'+esc(placedItem.text)+'</span>'+
+        '<button class="remove-btn" data-remove="'+step.id+'" aria-label="Remove">×</button>';
+    } else {
+      cls = 'sym-empty';
+      inner = '<span class="slot-placeholder">+</span>';
+    }
+    return '<div class="sym '+cls+' slot'+filledClass+'" data-slot="'+step.id+'">'+inner+'</div>';
+  }
+
+  /* Dropdown-mode levels (shape and wording chosen separately, per step) share one
+     shuffled wording pool across every slot in the level, built from each step's own
+     text plus any decoy whose text doesn't just duplicate a step's (a same-text decoy
+     only existed to fake a shape — meaningless once shape is its own dropdown). */
+  function ddTextOptions(level){
+    if(ddTextCache[level.key]) return ddTextCache[level.key];
+    var all = level.steps.concat(level.decoys || []);
+    var seen = {};
+    var unique = all.filter(function(it){
+      if(seen[it.text]) return false;
+      seen[it.text] = true;
+      return true;
+    });
+    for(var i=unique.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = unique[i]; unique[i]=unique[j]; unique[j]=tmp;
+    }
+    ddTextCache[level.key] = unique;
+    return unique;
+  }
+
+  function slotDropdownHTML(step, level, st){
+    var sel = st.ddSel[step.id] || {};
+    var filledClass = (sel.shape && sel.textId) ? ' slot--filled' : '';
+    var shapeOpts = SYMBOLS.map(function(s){
+      return '<option value="'+s.shape+'"'+(sel.shape===s.shape?' selected':'')+'>'+esc(s.label)+'</option>';
+    }).join('');
+    var textOpts = ddTextOptions(level).map(function(it){
+      return '<option value="'+it.id+'"'+(sel.textId===it.id?' selected':'')+'>'+esc(it.text)+'</option>';
+    }).join('');
+    return '<div class="dd-card'+filledClass+'" data-slot="'+step.id+'">'+
+      '<select class="dd-select" data-slot="'+step.id+'" data-field="shape" aria-label="Shape for this step">'+
+        '<option value="">Shape…</option>'+shapeOpts+
+      '</select>'+
+      '<select class="dd-select" data-slot="'+step.id+'" data-field="text" aria-label="Wording for this step">'+
+        '<option value="">Wording…</option>'+textOpts+
+      '</select>'+
+    '</div>';
+  }
+
+  function renderStepSlot(step, level, st){
+    return level.mode === 'dropdown' ? slotDropdownHTML(step, level, st) : slotHTML(step, level, st);
+  }
+
+  function branchLabelHTML(labelText, decisionId, side, level, st){
+    if(level.chooseBranch){
+      var legKey = decisionId + '-' + side;
+      var val = st.branchSel[legKey] || '';
+      return '<select class="branch-label dd-dir" data-leg="'+legKey+'" aria-label="Which branch is this?">'+
+        '<option value="">Branch…</option>'+
+        '<option value="no"'+(val==='no'?' selected':'')+'>No</option>'+
+        '<option value="yes"'+(val==='yes'?' selected':'')+'>Yes</option>'+
+      '</select>';
+    }
+    return '<div class="branch-label">'+esc(labelText)+'</div>';
+  }
+
+  /* entries: array of step-id strings and/or {decision:{id,leftLabel,rightLabel,left,right}}
+     objects, where left/right are leg objects {entries, note?}. Recursion lets one branch
+     column hold its own nested decision without the overall width compounding, because a
+     nested decision is drawn as a vertical stack (.nested-fork), never a second row of
+     side-by-side columns. */
+  function renderEntries(entries, level, st){
+    return entries.map(function(entry, i){
+      var connector = i>0 ? '<div class="connector connector--short"></div>' : '';
+      if(typeof entry === 'string'){
+        var step = findStep(level, entry);
+        var out = connector + renderStepSlot(step, level, st);
+        if(step.loopTo){ out += '<div class="loop-badge">↺ back to the check</div>'; }
+        return out;
+      }
+      if(entry.decision){
+        var d = entry.decision;
+        var decisionStep = findStep(level, d.id);
+        return connector + renderStepSlot(decisionStep, level, st) +
+          '<div class="nested-fork">'+
+            '<div class="nested-leg">'+branchLabelHTML(d.leftLabel, d.id, 'L', level, st)+renderBranchLeg(d.left, level, st)+'</div>'+
+            '<div class="nested-leg">'+branchLabelHTML(d.rightLabel, d.id, 'R', level, st)+renderBranchLeg(d.right, level, st)+'</div>'+
+          '</div>';
+      }
+      return '';
+    }).join('');
+  }
+
+  function renderBranchLeg(leg, level, st){
+    var html = renderEntries(leg.entries || [], level, st);
+    if(leg.note){ html += '<div class="loop-badge">'+esc(leg.note)+'</div>'; }
+    return html;
+  }
+
+  function renderSpur(spur, level, st){
+    var decisionStep = findStep(level, spur.decisionId);
+    var armHtml = spur.armIds.map(function(id, i){
+      var step = findStep(level, id);
+      return (i>0 ? '<div class="connector connector--short"></div>' : '') + renderStepSlot(step, level, st);
+    }).join('');
+    return '<div class="spur">'+
+      '<div class="spur-trunk">'+ renderStepSlot(decisionStep, level, st) +
+        '<div class="spur-no-label">No ↓</div></div>'+
+      '<div class="spur-arm"><div class="spur-yes-label">Yes →</div>'+
+        '<div class="spur-arm-body">'+armHtml+'</div></div>'+
+    '</div>';
+  }
+
+  function renderFlowLayout(level, st){
+    var html = '';
+    level.layout.forEach(function(entry, idx){
+      if(idx>0) html += '<div class="connector"></div>';
+      if(entry.row){
+        html += renderStepSlot(findStep(level, entry.row), level, st);
+      } else if(entry.branch){
+        html += '<div class="branch">'+
+          '<div class="branch-stem"></div>'+
+          '<div class="branch-row">'+
+            '<div class="branch-leg">'+branchLabelHTML(entry.branch.left.label, entry.branch.decisionId, 'L', level, st)+'</div>'+
+            '<div class="branch-leg">'+branchLabelHTML(entry.branch.right.label, entry.branch.decisionId, 'R', level, st)+'</div>'+
+          '</div>'+
+          '<div class="branch-cols">'+
+            '<div class="branch-col">'+renderBranchLeg(entry.branch.left, level, st)+'</div>'+
+            '<div class="branch-col">'+renderBranchLeg(entry.branch.right, level, st)+'</div>'+
+          '</div>'+
+        '</div>';
+      } else if(entry.spur){
+        html += renderSpur(entry.spur, level, st);
+      }
+    });
+    return html;
+  }
+
+  function renderBoard(){
+    var level = LEVELS[currentIndex];
+    var st = getState(level.key);
+    var boardEl = document.getElementById('board');
+    var paletteEl = document.getElementById('palette');
+    var usedIds = {};
+    Object.keys(st.placements).forEach(function(k){ usedIds[st.placements[k]] = true; });
+
+    boardEl.innerHTML = renderFlowLayout(level, st);
+    if(level.mode === 'dropdown'){
+      paletteEl.innerHTML = '';
+    } else {
+      var allPieces = level.steps.concat(level.decoys || []);
+      paletteEl.innerHTML = shuffledList(allPieces, level.key)
+        .filter(function(it){ return !usedIds[it.id]; })
+        .map(pieceHTML).join('');
+    }
+    attachHandlers();
+  }
+
+  function attachHandlers(){
+    var pieces = document.querySelectorAll('.piece');
+    for(var i=0;i<pieces.length;i++){ pieces[i].addEventListener('pointerdown', onPieceDown); }
+    var removers = document.querySelectorAll('.remove-btn');
+    for(var j=0;j<removers.length;j++){
+      removers[j].addEventListener('click', function(e){
+        e.stopPropagation();
+        var slotId = e.currentTarget.getAttribute('data-remove');
+        var level = LEVELS[currentIndex];
+        var st = getState(level.key);
+        delete st.placements[slotId];
+        renderBoard();
+        setCheckButtonMode('check');
+      });
+    }
+    var ddSelects = document.querySelectorAll('.dd-select');
+    for(var k=0;k<ddSelects.length;k++){
+      ddSelects[k].addEventListener('change', function(e){
+        var slotId = e.currentTarget.getAttribute('data-slot');
+        var field = e.currentTarget.getAttribute('data-field');
+        var level = LEVELS[currentIndex];
+        var st = getState(level.key);
+        if(!st.ddSel[slotId]) st.ddSel[slotId] = {};
+        if(field === 'shape'){ st.ddSel[slotId].shape = e.currentTarget.value; }
+        else { st.ddSel[slotId].textId = e.currentTarget.value; }
+        renderBoard();
+        setCheckButtonMode('check');
+      });
+    }
+    var ddDirs = document.querySelectorAll('.dd-dir');
+    for(var m=0;m<ddDirs.length;m++){
+      ddDirs[m].addEventListener('change', function(e){
+        var legKey = e.currentTarget.getAttribute('data-leg');
+        var level = LEVELS[currentIndex];
+        var st = getState(level.key);
+        st.branchSel[legKey] = e.currentTarget.value;
+        setCheckButtonMode('check');
+      });
+    }
+  }
+
+  function onPieceDown(e){
+    if(e.button !== undefined && e.button !== 0) return;
+    var pieceEl = e.currentTarget;
+    var pieceId = pieceEl.getAttribute('data-piece');
+    var rect = pieceEl.getBoundingClientRect();
+    var offsetX = e.clientX - rect.left;
+    var offsetY = e.clientY - rect.top;
+
+    var ghost = pieceEl.cloneNode(true);
+    ghost.classList.add('ghost');
+    ghost.style.position = 'fixed';
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.margin = '0';
+    document.body.appendChild(ghost);
+    pieceEl.classList.add('piece--dragging');
+    document.body.classList.add('is-dragging');
+
+    function clearHover(){
+      var hovered = document.querySelectorAll('.slot--hover');
+      for(var k=0;k<hovered.length;k++){ hovered[k].classList.remove('slot--hover'); }
+    }
+
+    /* Auto-scroll the page while dragging near the top/bottom edge of the viewport,
+       so a piece can be carried from the palette down to a slot (or back) even when
+       both don't fit on screen at once. The ghost is position:fixed, so it tracks the
+       pointer correctly on its own while the page scrolls underneath it. */
+    var autoScrollSpeed = 0;
+    var autoScrollRAF = null;
+    var EDGE_ZONE = 90, EDGE_MAX_SPEED = 16;
+
+    function autoScrollStep(){
+      if(autoScrollSpeed !== 0){
+        window.scrollBy(0, autoScrollSpeed);
+        autoScrollRAF = requestAnimationFrame(autoScrollStep);
+      } else {
+        autoScrollRAF = null;
+      }
+    }
+    function updateAutoScroll(clientY){
+      var vh = window.innerHeight;
+      if(clientY < EDGE_ZONE){
+        autoScrollSpeed = -EDGE_MAX_SPEED * (1 - clientY / EDGE_ZONE);
+      } else if(clientY > vh - EDGE_ZONE){
+        autoScrollSpeed = EDGE_MAX_SPEED * (1 - (vh - clientY) / EDGE_ZONE);
+      } else {
+        autoScrollSpeed = 0;
+      }
+      if(autoScrollSpeed !== 0 && autoScrollRAF === null){
+        autoScrollRAF = requestAnimationFrame(autoScrollStep);
+      }
+    }
+    function stopAutoScroll(){
+      autoScrollSpeed = 0;
+      if(autoScrollRAF !== null){ cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+    }
+
+    function move(ev){
+      ghost.style.left = (ev.clientX - offsetX) + 'px';
+      ghost.style.top = (ev.clientY - offsetY) + 'px';
+      clearHover();
+      var el = document.elementFromPoint(ev.clientX, ev.clientY);
+      var slot = el && el.closest ? el.closest('.slot') : null;
+      if(slot){ slot.classList.add('slot--hover'); }
+      updateAutoScroll(ev.clientY);
+    }
+
+    function up(ev){
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      stopAutoScroll();
+      ghost.remove();
+      pieceEl.classList.remove('piece--dragging');
+      document.body.classList.remove('is-dragging');
+      clearHover();
+      var el = document.elementFromPoint(ev.clientX, ev.clientY);
+      var slot = el && el.closest ? el.closest('.slot') : null;
+      if(slot){
+        var slotId = slot.getAttribute('data-slot');
+        var level = LEVELS[currentIndex];
+        var st = getState(level.key);
+        st.placements[slotId] = pieceId;
+        renderBoard();
+        setCheckButtonMode('check');
+      }
+    }
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    e.preventDefault();
+  }
+
+  function setFeedbackMessage(correct, total){
+    var el = document.getElementById('feedback');
+    if(correct === undefined){ el.className = 'feedback'; el.textContent = ''; return; }
+    if(correct === total){
+      el.className = 'feedback feedback--success';
+      el.textContent = 'Complete — ' + correct + ' of ' + total + ' steps correct.';
+    } else {
+      el.className = 'feedback feedback--warn';
+      el.textContent = correct + ' of ' + total + ' steps correct. Review the flow yourself and try again — slots aren’t marked individually.';
+    }
+  }
+
+  function setCheckButtonMode(mode){
+    var btn = document.getElementById('checkBtn');
+    if(mode === 'continue'){
+      if(currentIndex < LEVELS.length - 1){
+        btn.textContent = 'Continue →';
+        btn.disabled = false;
+        btn.onclick = goToNextLevel;
+      } else {
+        btn.textContent = 'All Levels Complete ✓';
+        btn.disabled = true;
+        btn.onclick = null;
+      }
+    } else {
+      btn.textContent = 'Check Flow';
+      btn.disabled = false;
+      btn.onclick = checkLevel;
+    }
+  }
+
+  function goToNextLevel(){
+    if(currentIndex < LEVELS.length - 1 && isUnlocked(currentIndex+1)){
+      currentIndex++;
+      renderAll();
+    }
+  }
+
+  /* For a chooseBranch level, each decision contributes two legs, keyed
+     "<decisionId>-L" (the "No" leg) and "<decisionId>-R" (the "Yes" leg) —
+     the left/right-is-No/Yes convention is fixed across the whole app. */
+  function branchLegKeysFor(level){
+    if(!level.branchDecisionIds) return [];
+    var keys = [];
+    level.branchDecisionIds.forEach(function(id){
+      keys.push(id+'-L');
+      keys.push(id+'-R');
+    });
+    return keys;
+  }
+
+  function checkLevel(){
+    var level = LEVELS[currentIndex];
+    var st = getState(level.key);
+    var total = level.steps.length, correct = 0;
+    if(level.mode === 'dropdown'){
+      level.steps.forEach(function(it){
+        var sel = st.ddSel[it.id];
+        if(sel && sel.shape === it.shape && sel.textId === it.id){ correct++; }
+      });
+      if(level.chooseBranch){
+        var legKeys = branchLegKeysFor(level);
+        total += legKeys.length;
+        legKeys.forEach(function(key){
+          var want = key.slice(-1) === 'L' ? 'no' : 'yes';
+          if(st.branchSel[key] === want){ correct++; }
+        });
+      }
+    } else {
+      level.steps.forEach(function(it){
+        if(st.placements[it.id] === it.id){ correct++; }
+      });
+    }
+    setFeedbackMessage(correct, total);
+    if(correct === total){
+      completed[level.key] = true;
+      try{ localStorage.setItem('flowforge_completed_v1', JSON.stringify(Object.keys(completed))); }catch(e){}
+      renderTabs();
+      setCheckButtonMode('continue');
+    } else {
+      setCheckButtonMode('check');
+    }
+  }
+
+  function renderTabs(){
+    var nav = document.getElementById('levelTabs');
+    nav.innerHTML = LEVELS.map(function(lv, i){
+      var unlocked = isUnlocked(i);
+      var cls = 'tab' + (i===currentIndex?' tab--active':'') + (!unlocked?' tab--locked':'');
+      var mark = completed[lv.key] ? '<span class="tab-check">✓</span>' : (!unlocked ? '<span class="tab-lock">'+LOCK_SVG+'</span>' : '');
+      return '<button class="'+cls+'" data-index="'+i+'"'+(!unlocked?' disabled aria-disabled="true"':'')+'>'+
+        '<span class="tab-num">'+(i+1)+'</span><span class="tab-title">'+esc(lv.title)+'</span>'+mark+
+        '</button>';
+    }).join('');
+    var tabs = nav.querySelectorAll('.tab');
+    for(var i=0;i<tabs.length;i++){
+      tabs[i].addEventListener('click', function(e){
+        var idx = Number(e.currentTarget.getAttribute('data-index'));
+        if(!isUnlocked(idx)) return;
+        currentIndex = idx;
+        renderAll();
+      });
+    }
+    var activeTab = nav.querySelector('.tab--active');
+    if(activeTab){ activeTab.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'nearest' }); }
+  }
+
+  function renderLegendOnce(){
+    var wrap = document.getElementById('legendRow');
+    wrap.innerHTML = SYMBOLS.map(function(s){
+      return '<div class="legend-chip"><div class="sym '+shapeClass(s.shape)+' sym--mini">'+
+        '<span class="sym-text">'+esc(s.label)+'</span></div></div>';
+    }).join('');
+  }
+
+  var DRAG_INSTRUCTION = 'Drag symbols into the slots, then put them in the right order. Some pieces are decoys: matching wording in the wrong shape, or a tempting wrong number. Click “Check Flow” to verify.';
+  var DD_INSTRUCTION = 'For each slot, pick its shape and its wording from the dropdowns — separately. Some wordings are decoys: a tempting near-miss number or condition. Click “Check Flow” to verify.';
+  var DD_BRANCH_INSTRUCTION = 'For each slot, pick its shape and wording from the dropdowns, and pick No/Yes for each branch — the labels have been removed, so work out which leg is which. Click “Check Flow” to verify.';
+
+  function renderAll(){
+    var level = LEVELS[currentIndex];
+    document.getElementById('levelTitleText').textContent = level.title;
+    document.getElementById('scenarioText').textContent = level.scenario;
+    var isDropdown = level.mode === 'dropdown';
+    document.getElementById('instructionText').textContent = !isDropdown ? DRAG_INSTRUCTION :
+      (level.chooseBranch ? DD_BRANCH_INSTRUCTION : DD_INSTRUCTION);
+    document.getElementById('paletteLabel').style.display = isDropdown ? 'none' : '';
+    renderTabs();
+    renderBoard();
+    setFeedbackMessage();
+    setCheckButtonMode('check');
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    var level = LEVELS[currentIndex];
+    delete state[level.key];
+    delete shuffleCache[level.key];
+    delete ddTextCache[level.key];
+    renderBoard();
+    setFeedbackMessage();
+    setCheckButtonMode('check');
+  });
+
+  document.getElementById('tabsPrev').addEventListener('click', function(){
+    var el = document.getElementById('levelTabs');
+    el.scrollBy({ left: -Math.max(160, el.clientWidth * 0.75), behavior: 'smooth' });
+  });
+  document.getElementById('tabsNext').addEventListener('click', function(){
+    var el = document.getElementById('levelTabs');
+    el.scrollBy({ left: Math.max(160, el.clientWidth * 0.75), behavior: 'smooth' });
+  });
+
+  renderLegendOnce();
+  renderAll();
+})();
+</script>
+
+</body></html>
