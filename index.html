@@ -1,320 +1,548 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Flowchart Forge</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* layout concept: single centered vertical "workbench" column — scenario, flowchart canvas, symbol tray stack top to bottom, same on phone and desktop */
+/* layout concept: a lab workbench. Left rail = level map + score HUD, middle = mission card over a
+   graph-paper canvas, right = symbol tray. Every flowchart symbol type owns one color, the same on
+   the legend, the tray and the canvas. Collapses to one column on phones (map, mission, tray, canvas). */
 :root{
-  --bg:#F5F6FB; --surface:#FFFFFF; --surface-2:#ECEEF6;
-  --fg:#161925; --fg-muted:#5B6077; --line:#CDD1E0;
-  --accent:#3450C9; --accent-rgb:52,80,201; --accent-fg:#FFFFFF;
-  --chip-bg:#EDE9FF; --chip-fg:#4B3FA0;
-  --success:#1E8E5A; --success-bg:#E3F6EC;
-  --danger:#C83F3F; --danger-bg:#FBEAEA;
+  --bg:#EAF0F8; --surface:#FFFFFF; --surface-2:#F2F5FB; --paper:#FBFCFF; --grid:#E3E9F4;
+  --fg:#15213B; --fg-muted:#5B6884; --line:#C9D3E4;
+  --accent:#2F5BEA; --accent-rgb:47,91,234; --accent-fg:#FFFFFF; --accent-deep:#1D3FB3;
+  --chip-bg:#E6ECFD; --chip-fg:#2443A8;
+  --gold:#EFA400; --gold-soft:#FFF3CC; --star-off:#D3DAE7;
+  --success:#138F57; --success-bg:#DDF5E8;
+  --danger:#CF3546; --danger-bg:#FCE4E7;
+  --term:#1E9E66; --term-bg:#DCF4E8;
+  --io:#1786C4; --io-bg:#DCEEFA;
+  --proc:#CC8000; --proc-bg:#FFEFCC;
+  --dec:#D9475A; --dec-bg:#FCE2E6;
+  --shadow:0 1px 0 rgba(21,33,59,.05), 0 8px 20px rgba(21,33,59,.08);
+  --font-display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
+  --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#13151E; --surface:#1B1E2A; --surface-2:#232738;
-    --fg:#EDEFF6; --fg-muted:#9CA1B8; --line:#383D52;
-    --accent:#8097FF; --accent-rgb:128,151,255; --accent-fg:#101225;
-    --chip-bg:#2A2650; --chip-fg:#C9BFFF;
-    --success:#4FCB8E; --success-bg:#123326;
-    --danger:#FF8A80; --danger-bg:#3A1A1A;
+    --bg:#0E1424; --surface:#161E33; --surface-2:#1C2640; --paper:#121A2D; --grid:#1D2843;
+    --fg:#E9EEF9; --fg-muted:#9AA6C2; --line:#34415F;
+    --accent:#7D9BFF; --accent-rgb:125,155,255; --accent-fg:#0B1230; --accent-deep:#4462CF;
+    --chip-bg:#232F55; --chip-fg:#C3D0FF;
+    --gold:#FFC93C; --gold-soft:#3A3115; --star-off:#36425F;
+    --success:#4CD08F; --success-bg:#12301F;
+    --danger:#FF7D8A; --danger-bg:#3A1820;
+    --term:#3FD08C; --term-bg:#13311F;
+    --io:#4CB8F0; --io-bg:#112E46;
+    --proc:#FFB938; --proc-bg:#382A0C;
+    --dec:#FF7584; --dec-bg:#3B1921;
+    --shadow:0 1px 0 rgba(0,0,0,.25), 0 10px 24px rgba(0,0,0,.35);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#13151E; --surface:#1B1E2A; --surface-2:#232738;
-  --fg:#EDEFF6; --fg-muted:#9CA1B8; --line:#383D52;
-  --accent:#8097FF; --accent-rgb:128,151,255; --accent-fg:#101225;
-  --chip-bg:#2A2650; --chip-fg:#C9BFFF;
-  --success:#4FCB8E; --success-bg:#123326;
-  --danger:#FF8A80; --danger-bg:#3A1A1A;
+  --bg:#0E1424; --surface:#161E33; --surface-2:#1C2640; --paper:#121A2D; --grid:#1D2843;
+  --fg:#E9EEF9; --fg-muted:#9AA6C2; --line:#34415F;
+  --accent:#7D9BFF; --accent-rgb:125,155,255; --accent-fg:#0B1230; --accent-deep:#4462CF;
+  --chip-bg:#232F55; --chip-fg:#C3D0FF;
+  --gold:#FFC93C; --gold-soft:#3A3115; --star-off:#36425F;
+  --success:#4CD08F; --success-bg:#12301F;
+  --danger:#FF7D8A; --danger-bg:#3A1820;
+  --term:#3FD08C; --term-bg:#13311F;
+  --io:#4CB8F0; --io-bg:#112E46;
+  --proc:#FFB938; --proc-bg:#382A0C;
+  --dec:#FF7584; --dec-bg:#3B1921;
+  --shadow:0 1px 0 rgba(0,0,0,.25), 0 10px 24px rgba(0,0,0,.35);
   color-scheme:dark;
 }
 
 *{box-sizing:border-box;}
 body{
   margin:0; background:var(--bg); color:var(--fg);
-  font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  font-family:var(--font-body); font-size:15px;
 }
+button, select{ font-family:inherit; }
 
-/* dashboard shell: fixed-width level sidebar, a scenario card and board stacked in
-   the flexible middle column, fixed-width symbols sidebar spanning both their rows.
-   On narrow screens it collapses to one stacked column, reordered so the scenario
-   card sits right above the symbol palette, and the palette right above the board
-   it feeds — not sidebar/main/symbols in DOM order. */
 .layout{
   display:grid;
-  grid-template-columns:272px 1fr 320px;
+  grid-template-columns:280px minmax(0,1fr) 312px;
   grid-template-areas:
     "sidebar scenario symbols"
     "sidebar board    symbols";
-  gap:28px; align-items:start;
-  max-width:1240px; margin:0 auto;
+  grid-template-rows:auto 1fr;
+  gap:24px; align-items:start;
+  max-width:1260px; margin:0 auto;
   padding-block:28px 20px;
   padding-left:max(16px, env(safe-area-inset-left,0px));
   padding-right:max(16px, env(safe-area-inset-right,0px));
 }
 @media (max-width:920px){
   .layout{
-    grid-template-columns:1fr;
+    grid-template-columns:minmax(0,1fr);
     grid-template-areas:"sidebar" "scenario" "symbols" "board";
-    gap:22px;
+    grid-template-rows:none;
+    gap:18px; padding-block:20px 16px;
   }
+  .dd-hint{ display:none; }
 }
 .panel-sidebar{ grid-area:sidebar; min-width:0; }
 .scenario{ grid-area:scenario; min-width:0; }
-.panel-symbols{ grid-area:symbols; min-width:0; }
+.panel-symbols{ grid-area:symbols; min-width:0; display:flex; flex-direction:column; gap:14px; }
 .panel-board{ grid-area:board; min-width:0; }
-
-/* sidebar */
-.kicker{ font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); }
-h1{ font:700 30px/1.15 'IBM Plex Sans',sans-serif; margin:.35em 0 .22em; letter-spacing:-.01em; }
-.sub{ color:var(--fg-muted); font-size:14px; line-height:1.5; margin:0; }
-
-/* level tabs — full-width rows stacked down the sidebar on desktop; a horizontal
-   scrolling chip strip with prev/next arrows on narrow screens (see breakpoint below) */
-.tabs-carousel{ display:flex; align-items:center; gap:8px; margin-top:22px; }
-.tabs{ display:flex; flex-direction:column; gap:10px; min-width:0; flex:1; }
-.tab{
-  display:flex; align-items:center; gap:10px; width:100%;
-  padding:13px 15px; border-radius:12px; border:2px solid var(--line);
-  background:var(--surface); font:600 14.5px/1.3 'IBM Plex Sans',sans-serif; color:var(--fg);
-  cursor:pointer; text-align:left; -webkit-appearance:none;
+@media (min-width:921px){
+  .panel-sidebar, .panel-symbols{ position:sticky; top:calc(env(safe-area-inset-top,0px) + 16px); }
 }
-.tab--active{ border-color:var(--accent); color:var(--accent); background:rgba(var(--accent-rgb),.08); }
-.tab--locked{ opacity:.45; cursor:not-allowed; }
-.tab-num{ font:600 12px/1 'IBM Plex Mono',monospace; opacity:.7; flex:0 0 auto; }
-.tab-title{ flex:1; min-width:0; }
-.tab-check{ color:var(--success); font-weight:700; flex:0 0 auto; }
+
+/* ---------- sidebar: brand, HUD, level map ---------- */
+.brand{ display:flex; align-items:center; gap:12px; }
+.brand-mark{
+  flex:0 0 auto; width:48px; height:48px; border-radius:14px; background:var(--accent);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 4px 0 var(--accent-deep);
+}
+.brand-mark svg{ display:block; }
+.kicker{ font:700 10.5px/1 var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
+h1{ font:800 28px/1.05 var(--font-display); margin:5px 0 0; letter-spacing:-.02em; text-wrap:balance; }
+.sub{ color:var(--fg-muted); font-size:14px; line-height:1.5; margin:12px 0 0; max-width:60ch; }
+
+.hud{
+  margin-top:16px; background:var(--surface); border-radius:16px; box-shadow:var(--shadow);
+  padding:14px 16px; display:grid; grid-template-columns:1fr auto; gap:10px 12px; align-items:center;
+}
+.hud-label{ display:block; font:700 10px/1 var(--font-mono); letter-spacing:.09em; text-transform:uppercase; color:var(--fg-muted); }
+.hud-rank strong{ display:block; font:800 17px/1.15 var(--font-display); margin-top:5px; }
+.hud-stars{
+  display:flex; align-items:center; gap:5px; padding:7px 11px; border-radius:999px;
+  background:var(--gold-soft); font:700 15px/1 var(--font-mono); font-variant-numeric:tabular-nums;
+}
+.hud-stars .star-icon{ color:var(--gold); font-size:16px; }
+.hud-of{ color:var(--fg-muted); font-weight:500; font-size:12px; }
+.hud-progress{ grid-column:1 / -1; }
+.hud-bar{ height:10px; border-radius:999px; background:var(--surface-2); overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); }
+.hud-bar span{
+  display:block; height:100%; width:0; border-radius:999px;
+  background:linear-gradient(90deg, var(--term), var(--io) 40%, var(--proc) 70%, var(--dec));
+  transition:width .6s cubic-bezier(.2,.8,.2,1);
+}
+.hud-progress-text{ display:flex; justify-content:space-between; margin-top:7px; font-size:12.5px; color:var(--fg-muted); font-variant-numeric:tabular-nums; }
+.sound-btn{
+  grid-column:1 / -1; justify-self:start; display:inline-flex; align-items:center; gap:7px;
+  font:600 12.5px/1 var(--font-body); color:var(--fg-muted); background:transparent;
+  border:1.5px solid var(--line); border-radius:999px; padding:7px 12px; cursor:pointer;
+}
+.sound-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); background:rgba(var(--accent-rgb),.08); }
+.sound-btn:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+
+.map-label{ margin-top:20px; font:700 10.5px/1 var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); }
+.tabs-carousel{ display:flex; align-items:center; gap:8px; margin-top:10px; }
+.tabs{ display:flex; flex-direction:column; gap:8px; min-width:0; flex:1; position:relative; }
+.tab{
+  display:flex; align-items:center; gap:11px; width:100%;
+  padding:9px 12px 9px 9px; border-radius:14px; border:2px solid transparent;
+  background:var(--surface); color:var(--fg); box-shadow:var(--shadow);
+  font:600 14px/1.25 var(--font-body); cursor:pointer; text-align:left; -webkit-appearance:none;
+  transition:transform .15s, border-color .15s, background-color .15s;
+}
+.tab:hover:not(:disabled){ transform:translateX(3px); }
+.tab-num{
+  flex:0 0 auto; width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font:700 13px/1 var(--font-mono); background:var(--surface-2); color:var(--fg-muted);
+}
+.tab-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.tab-title{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tab-stars{ font-size:11px; letter-spacing:1px; line-height:1; color:var(--star-off); }
+.tab-stars .on{ color:var(--gold); }
 .tab-lock{ display:inline-flex; color:var(--fg-muted); flex:0 0 auto; }
+.tab--done .tab-num{ background:var(--success-bg); color:var(--success); }
+.tab--active{ border-color:var(--accent); background:rgba(var(--accent-rgb),.07); }
+.tab--active .tab-num{ background:var(--accent); color:var(--accent-fg); }
+.tab--locked{ opacity:.5; cursor:not-allowed; box-shadow:none; background:var(--surface-2); }
 .tab:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
 .tabs-arrow{
-  display:none; flex:0 0 auto; width:34px; height:34px; border-radius:999px;
-  border:1.5px solid var(--line); background:var(--surface); color:var(--fg);
-  font-size:17px; line-height:1; cursor:pointer; align-items:center; justify-content:center;
+  display:none; flex:0 0 auto; width:36px; height:36px; border-radius:999px;
+  border:none; background:var(--surface); color:var(--fg); box-shadow:var(--shadow);
+  font-size:18px; line-height:1; cursor:pointer; align-items:center; justify-content:center;
   padding:0; -webkit-appearance:none;
 }
 .tabs-arrow:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
 
 @media (max-width:920px){
+  .hud{ grid-template-columns:1fr auto; }
   .tabs-arrow{ display:flex; }
   .tabs{
     flex-direction:row; gap:8px; overflow-x:auto; scroll-behavior:smooth;
-    scrollbar-width:none; padding-block:2px;
+    scrollbar-width:none; padding-block:4px;
   }
   .tabs::-webkit-scrollbar{ display:none; }
-  .tab{ flex:0 0 auto; width:auto; padding:10px 16px; border-radius:999px; white-space:nowrap; }
-  .tab-title{ flex:0 0 auto; }
+  .tab{ flex:0 0 auto; width:auto; max-width:220px; padding:7px 14px 7px 7px; border-radius:999px; }
+  .tab-num{ border-radius:999px; width:30px; height:30px; }
+  .tab:hover:not(:disabled){ transform:none; }
 }
 
-/* legend (now lives in the symbols sidebar) */
-details.legend{ margin-top:0; }
-details.legend summary{
-  cursor:pointer; font:600 12.5px/1 'IBM Plex Mono',monospace; color:var(--fg-muted);
-  list-style:none; display:flex; align-items:center; gap:7px; letter-spacing:.03em;
-  text-transform:uppercase; -webkit-appearance:none;
-}
-details.legend summary::-webkit-details-marker{ display:none; }
-details.legend summary::before{ content:'▸'; display:inline-block; transition:transform .15s; color:var(--accent); }
-details.legend[open] summary::before{ transform:rotate(90deg); }
-.legend-row{ display:flex; flex-wrap:wrap; gap:10px; padding:12px 2px 4px; }
-.legend-chip{ flex:0 0 auto; }
-.sym--mini{ transform:scale(.7); transform-origin:center; }
-
-/* scenario card */
+/* ---------- mission card ---------- */
 .scenario{
-  background:var(--surface); border:1px solid var(--line); border-radius:14px;
-  padding:18px 20px;
+  background:var(--surface); border-radius:18px; box-shadow:var(--shadow);
+  padding:18px 20px 18px;
 }
-.scenario h2{ font:700 20px/1.3 'IBM Plex Sans',sans-serif; margin:0 0 9px; }
-.scenario p{ margin:0; font-size:14.5px; line-height:1.55; color:var(--fg); }
+.scenario-top{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; }
+.level-chip{
+  font:700 11px/1 var(--font-mono); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--chip-fg); background:var(--chip-bg); padding:6px 10px; border-radius:999px;
+}
+.diff{ display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--fg-muted); }
+.diff i{ width:8px; height:8px; border-radius:3px; background:var(--star-off); display:block; transform:rotate(45deg); }
+.diff i.on{ background:var(--dec); }
+.diff span{ margin-left:4px; }
+.attempts{ margin-left:auto; font:600 12px/1 var(--font-mono); color:var(--fg-muted); font-variant-numeric:tabular-nums; }
+.scenario h2{ font:800 24px/1.15 var(--font-display); margin:12px 0 8px; letter-spacing:-.015em; text-wrap:balance; }
+.scenario p{ margin:0; font-size:15px; line-height:1.55; max-width:68ch; }
 .instruction{
-  margin-top:9px !important; font-size:12.5px !important; color:var(--fg-muted) !important;
-  font-family:'IBM Plex Mono',monospace; line-height:1.5 !important;
+  margin-top:12px !important; font-size:13px !important; color:var(--fg-muted) !important; line-height:1.5 !important;
+  padding:10px 12px; border-radius:12px; background:var(--surface-2);
 }
 
-/* shared symbol shapes (used as both pieces and slots) — width:min(Npx,100%) so the
-   same shape class fills a column when used as a slot and sizes itself when used
-   as a wrapping palette piece, shrinking cleanly at phone width either way */
+/* ---------- symbol shapes ----------
+   Each type has its own stroke + fill color. Rounded shapes use a real border; the
+   parallelogram and diamond are clip-path shapes, so their outline is the element's
+   background and the fill is a ::before inset by the stroke width. */
 .sym{
-  position:relative; background:var(--surface); border:2px solid var(--line);
-  display:flex; align-items:center; justify-content:center; text-align:center;
-  user-select:none; transition:border-color .15s, background-color .15s, transform .1s;
+  --stroke:var(--line); --fill:var(--surface);
+  position:relative; isolation:isolate; background:var(--fill); border:2px solid var(--stroke);
+  display:flex; align-items:center; justify-content:center; text-align:center; color:var(--fg);
+  user-select:none; -webkit-user-select:none; transition:transform .12s, box-shadow .15s, filter .15s;
 }
-.sym-text{ font:500 12.5px/1.3 'IBM Plex Sans',sans-serif; }
-.sym-terminator{ width:min(142px,100%); min-height:44px; border-radius:999px; padding:8px 14px; }
-.sym-process{ width:min(208px,100%); min-height:50px; border-radius:10px; padding:10px 14px; }
-.sym-io{ width:min(208px,100%); min-height:50px; clip-path:polygon(16% 0,100% 0,84% 100%,0 100%); padding:10px 32px; }
-.sym-decision{ width:min(208px,100%); height:98px; clip-path:polygon(50% 4%,96% 50%,50% 96%,4% 50%); }
-.sym-decision .sym-text{ font-size:11.5px; max-width:68%; }
-.sym-empty{ width:min(190px,100%); min-height:50px; border-radius:10px; border-style:dashed; }
+.sym-text{ position:relative; z-index:1; font:600 12.5px/1.3 var(--font-body); }
+.sym-terminator{ --stroke:var(--term); --fill:var(--term-bg); width:min(150px,100%); min-height:44px; border-radius:999px; padding:8px 16px; }
+.sym-process{ --stroke:var(--proc); --fill:var(--proc-bg); width:min(210px,100%); min-height:50px; border-radius:8px; padding:10px 14px; }
+.sym-io, .sym-decision{ border:none; background:var(--stroke); }
+.sym-io::before, .sym-decision::before{ content:''; position:absolute; z-index:0; background:var(--fill); }
+.sym-io{
+  --stroke:var(--io); --fill:var(--io-bg); width:min(214px,100%); min-height:50px; padding:10px 34px;
+  clip-path:polygon(15% 0,100% 0,85% 100%,0 100%);
+}
+.sym-io::before{ inset:2.5px 3px; clip-path:polygon(15% 0,100% 0,85% 100%,0 100%); }
+.sym-decision{
+  --stroke:var(--dec); --fill:var(--dec-bg); width:min(214px,100%); height:100px;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+}
+.sym-decision::before{ inset:3px 5px; clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }
+.sym-decision .sym-text{ font-size:11.5px; max-width:64%; }
+.sym-empty{
+  width:min(196px,100%); min-height:50px; border-radius:12px; border:2px dashed var(--line);
+  background:var(--surface); background:color-mix(in srgb, var(--surface) 70%, transparent);
+}
 
-.piece{ box-shadow:0 1px 2px rgba(0,0,0,.06); cursor:grab; touch-action:none; }
+.piece{ cursor:grab; touch-action:none; }
+.piece.sym-terminator, .piece.sym-process{ box-shadow:0 3px 0 var(--stroke); }
+.piece.sym-io, .piece.sym-decision{ filter:drop-shadow(0 3px 0 var(--stroke)); }
+@media (hover:hover){ .piece:hover{ transform:translateY(-2px); } }
 .piece--dragging{ opacity:.3; }
-.ghost{ z-index:999; cursor:grabbing; box-shadow:0 10px 26px rgba(0,0,0,.2); pointer-events:none; }
+.ghost{ z-index:999; cursor:grabbing; pointer-events:none; transform:rotate(-3deg) scale(1.04); }
+.ghost.sym-terminator, .ghost.sym-process{ box-shadow:0 14px 28px rgba(0,0,0,.22); }
 body.is-dragging{ cursor:grabbing; }
+.piece:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; }
 
 .slot{ cursor:default; }
-.slot--filled{ background:rgba(var(--accent-rgb),.07); }
-.slot--hover{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(var(--accent-rgb),.18); }
-.slot-placeholder{ color:var(--line); font-size:17px; font-weight:300; }
-.piece:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+.slot-placeholder{ font:600 12px/1 var(--font-mono); color:var(--fg-muted); letter-spacing:.04em; }
+.slot--hover.sym-empty{ border-color:var(--accent); border-style:solid; background:rgba(var(--accent-rgb),.1); transform:scale(1.04); }
+.slot--hover:not(.sym-empty){ filter:brightness(1.06); transform:scale(1.03); }
+.slot--pop{ animation:pop .28s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop{ 0%{ transform:scale(.85); } 100%{ transform:scale(1); } }
 
 .remove-btn{
-  position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:999px;
-  background:var(--fg); color:var(--bg); border:none; font-size:12px; line-height:1;
+  position:absolute; z-index:2; top:-9px; right:-9px; width:22px; height:22px; border-radius:999px;
+  background:var(--fg); color:var(--bg); border:2px solid var(--paper); font-size:12px; line-height:1;
   cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
 }
-
-/* dropdown-mode slots (levels 6, 7, 8, 10): shape and wording chosen separately */
-.dd-card{
-  display:flex; flex-direction:column; gap:6px; width:min(220px,100%);
-  background:var(--surface); border:2px solid var(--line); border-radius:10px;
-  padding:10px; transition:border-color .15s, background-color .15s;
+/* the parallelogram and diamond clip anything outside their outline, so on those the
+   remove control becomes the whole shape: tap the placed symbol to send it back */
+.sym-io .remove-btn, .sym-decision .remove-btn{
+  top:0; right:0; left:0; bottom:0; width:auto; height:auto; border-radius:0;
+  background:transparent; border:none; color:transparent; cursor:pointer;
 }
-.dd-card.slot--filled{ background:rgba(var(--accent-rgb),.07); }
+.sym-io .remove-btn:focus-visible, .sym-decision .remove-btn:focus-visible{ outline:none; background:rgba(var(--accent-rgb),.15); }
+
+/* dropdown-mode slots (levels 6, 7, 8, 10): shape and wording are picked separately,
+   and the card takes on the picked shape and its color */
+.dd-card{
+  --stroke:var(--line); --fill:var(--surface);
+  position:relative; isolation:isolate;
+  display:flex; flex-direction:column; justify-content:center; gap:6px;
+  width:min(230px,100%); min-height:50px;
+  background:var(--fill); border:2px dashed var(--stroke); border-radius:12px;
+  padding:10px; transition:background-color .15s;
+}
+.dd-card.sym-terminator{ --stroke:var(--term); --fill:var(--term-bg); border-style:solid; width:min(230px,100%); border-radius:999px; padding:10px 22px; }
+.dd-card.sym-process{ --stroke:var(--proc); --fill:var(--proc-bg); border-style:solid; width:min(230px,100%); border-radius:8px; }
+/* on a dropdown card the parallelogram/diamond is drawn behind the controls (not
+   clipping them), so both dropdowns stay readable even in a narrow branch column */
+.dd-card.sym-io, .dd-card.sym-decision{ border:none; background:transparent; clip-path:none; }
+.dd-card.sym-io::after, .dd-card.sym-decision::after{ content:''; position:absolute; inset:0; z-index:-1; background:var(--stroke); }
+.dd-card.sym-io::before, .dd-card.sym-decision::before{ z-index:0; }
+.dd-card.sym-io{ --stroke:var(--io); --fill:var(--io-bg); width:min(260px,100%); padding:12px 26px; }
+.dd-card.sym-io::after{ clip-path:polygon(12% 0,100% 0,88% 100%,0 100%); }
+.dd-card.sym-io::before{ clip-path:polygon(12% 0,100% 0,88% 100%,0 100%); }
+.dd-card.sym-decision{ --stroke:var(--dec); --fill:var(--dec-bg); width:min(264px,100%); height:auto; min-height:136px; padding:30px 14px; }
+.dd-card.sym-decision::after{ clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); }
+.dd-card.sym-decision .dd-select{ box-shadow:0 2px 6px rgba(0,0,0,.12); }
+.dd-card.slot--pop{ animation:pop .28s cubic-bezier(.3,1.6,.5,1); }
 .dd-select{
-  width:100%; font:500 12.5px/1.3 'IBM Plex Sans',sans-serif; color:var(--fg);
-  background:var(--surface-2); border:1.5px solid var(--line); border-radius:7px;
-  padding:7px 8px; cursor:pointer;
+  position:relative; z-index:1;
+  width:100%; font:600 12.5px/1.3 var(--font-body); color:var(--fg);
+  background:var(--surface); border:1.5px solid var(--line); border-radius:8px;
+  padding:7px 8px; cursor:pointer; min-width:0;
 }
 .dd-select:focus-visible{ outline:3px solid var(--accent); outline-offset:1px; }
 
-.dd-dir{
-  margin-top:24px; font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.04em;
-  padding:4px 10px; border-radius:999px; background:var(--chip-bg); color:var(--chip-fg);
-  border:1.5px solid var(--line); cursor:pointer;
+/* ---------- canvas (graph paper) + connectors ---------- */
+.canvas{
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:22px 22px; background-position:-1px -1px;
+  border-radius:18px; box-shadow:var(--shadow); padding:0 16px 26px; overflow:hidden;
 }
-.nested-leg .dd-dir{ margin-top:0; }
+.canvas-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin:0 -16px 22px; padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--line);
+}
+.canvas-title{ font:700 10.5px/1 var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); }
+.fill-count{ font:700 12px/1 var(--font-mono); color:var(--fg); font-variant-numeric:tabular-nums; display:flex; align-items:center; gap:8px; }
+.fill-bar{ width:70px; height:6px; border-radius:999px; background:var(--surface-2); overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); }
+.fill-bar span{ display:block; height:100%; width:0; background:var(--accent); border-radius:999px; transition:width .3s; }
+.canvas.shake{ animation:shake .45s; }
+@keyframes shake{ 10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(4px);} 30%,50%,70%{transform:translateX(-7px);} 40%,60%{transform:translateX(7px);} }
 
-/* board + connectors */
 .board{ display:flex; flex-direction:column; align-items:center; }
-.connector{ width:2px; height:26px; background:var(--line); margin:0 auto; position:relative; }
+.connector{ width:2px; height:26px; background:var(--fg-muted); opacity:.55; margin:0 auto; position:relative; }
 .connector::after{
   content:''; position:absolute; left:50%; bottom:-1px; transform:translateX(-50%);
-  border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--line);
+  border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid var(--fg-muted);
 }
 .connector--short{ height:16px; }
 
-/* branch split (decision with two paths, both drawn as columns; a column's own
-   content may itself include a nested decision via .nested-fork, stacked vertically
-   so width never compounds no matter how deep the nesting goes) */
-.branch{ width:100%; max-width:340px; margin:0 auto; }
-.branch-stem{ width:2px; height:18px; background:var(--line); margin:0 auto; }
-.branch-row{ display:flex; border-top:2px solid var(--line); position:relative; }
+.branch{ width:100%; max-width:360px; margin:0 auto; }
+.branch-stem{ width:2px; height:18px; background:var(--fg-muted); opacity:.55; margin:0 auto; }
+.branch-row{ display:flex; border-top:2px solid color-mix(in srgb, var(--fg-muted) 55%, transparent); position:relative; }
 .branch-leg{ flex:1; display:flex; justify-content:center; position:relative; }
-.branch-leg::before{
-  content:''; position:absolute; top:0; left:50%; width:2px; height:16px; background:var(--line);
-}
+.branch-leg::before{ content:''; position:absolute; top:0; left:50%; width:2px; height:16px; background:var(--fg-muted); opacity:.55; }
 .branch-label{
-  margin-top:24px; font:600 11px/1 'IBM Plex Mono',monospace; letter-spacing:.04em;
-  padding:4px 10px; border-radius:999px; background:var(--chip-bg); color:var(--chip-fg);
+  margin-top:22px; font:700 11px/1 var(--font-mono); letter-spacing:.04em;
+  padding:5px 10px; border-radius:999px; background:var(--chip-bg); color:var(--chip-fg);
 }
-.branch-cols{ display:flex; gap:18px; margin-top:8px; align-items:flex-start; }
+.branch-cols{ display:flex; gap:16px; margin-top:8px; align-items:flex-start; }
 .branch-col{ flex:1 1 150px; min-width:0; display:flex; flex-direction:column; align-items:center; gap:10px; }
 
 .nested-fork{ display:flex; flex-direction:column; gap:10px; margin-top:10px; width:100%; }
 .nested-leg{
   display:flex; flex-direction:column; align-items:center; gap:8px; width:100%;
-  padding:12px 8px; border-radius:10px; border:1.5px dashed var(--line);
+  padding:12px 8px; border-radius:12px; border:1.5px dashed var(--line);
+  background:var(--paper); background:color-mix(in srgb, var(--paper) 80%, transparent);
 }
 .nested-leg .branch-label{ margin-top:0; }
+.dd-dir{ border:1.5px solid var(--chip-fg); cursor:pointer; font:700 11px/1 var(--font-mono); }
+.dd-dir:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
 
-/* decision with one side-exit while the trunk continues straight down — used for
-   long chains of independent checks (e.g. grade bands) so width never compounds */
 .spur{ display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:16px; width:100%; }
 .spur-trunk{ display:flex; flex-direction:column; align-items:center; gap:6px; flex:0 1 auto; min-width:0; }
-.spur-no-label{ font:600 10.5px/1 'IBM Plex Mono',monospace; color:var(--fg-muted); letter-spacing:.03em; }
+.spur-no-label{ font:700 10.5px/1 var(--font-mono); color:var(--fg-muted); letter-spacing:.03em; }
 .spur-arm{
   display:flex; flex-direction:column; align-items:center; gap:6px; flex:0 1 auto; min-width:0;
   max-width:100%; padding:30px 0 0 14px; border-left:2px dashed var(--line);
 }
-.spur-yes-label{
-  font:600 10.5px/1 'IBM Plex Mono',monospace; color:var(--chip-fg); background:var(--chip-bg);
-  padding:3px 9px; border-radius:999px;
-}
+.spur-yes-label{ font:700 10.5px/1 var(--font-mono); color:var(--chip-fg); background:var(--chip-bg); padding:4px 9px; border-radius:999px; }
 .spur-arm-body{ display:flex; flex-direction:column; align-items:center; gap:8px; }
 
 .loop-badge{
-  margin-top:2px; font:500 10.5px/1.3 'IBM Plex Mono',monospace; color:var(--accent);
-  border:1px dashed var(--accent); border-radius:999px; padding:4px 10px; text-align:center;
+  margin-top:2px; font:600 10.5px/1.3 var(--font-mono); color:var(--accent);
+  border:1.5px dashed var(--accent); border-radius:999px; padding:4px 10px; text-align:center; background:var(--paper);
 }
 
-/* palette */
-.palette-label{
-  margin-top:20px; font:600 12px/1 'IBM Plex Mono',monospace; letter-spacing:.05em;
-  color:var(--fg-muted); text-transform:uppercase;
-}
+/* ---------- tray + legend ---------- */
+.tray, .legend, .dd-hint{ background:var(--surface); border-radius:18px; box-shadow:var(--shadow); padding:14px; }
+.tray-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.palette-label{ font:700 10.5px/1 var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--fg-muted); }
+.tray-count{ font:600 12px/1 var(--font-mono); color:var(--fg-muted); font-variant-numeric:tabular-nums; }
 .palette{
-  display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; padding:14px;
-  background:var(--surface-2); border-radius:14px; min-height:62px;
+  display:flex; flex-wrap:wrap; gap:12px 10px; align-items:center; padding:14px 10px 16px;
+  background:var(--surface-2); border-radius:14px; min-height:70px;
 }
+.palette-empty{ font-size:13px; color:var(--fg-muted); padding:6px; }
+.dd-hint{ font-size:13.5px; line-height:1.5; }
+.dd-hint strong{ display:block; font:800 16px/1.2 var(--font-display); margin-bottom:4px; }
 
-/* controls + feedback */
-.controls{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+details.legend summary{
+  cursor:pointer; font:700 10.5px/1 var(--font-mono); color:var(--fg-muted);
+  list-style:none; display:flex; align-items:center; gap:8px; letter-spacing:.1em;
+  text-transform:uppercase; -webkit-appearance:none;
+}
+details.legend summary::-webkit-details-marker{ display:none; }
+details.legend summary::before{ content:'▸'; display:inline-block; transition:transform .15s; color:var(--accent); font-size:12px; }
+details.legend[open] summary::before{ transform:rotate(90deg); }
+details.legend summary:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; border-radius:6px; }
+.legend-row{ display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; padding-top:10px; }
+.legend-chip{ display:flex; justify-content:center; }
+.sym--mini{ transform:scale(.72); transform-origin:center; }
+
+/* ---------- controls + feedback ---------- */
+.controls{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
 .btn{
-  font:600 14px/1 'IBM Plex Sans',sans-serif; padding:12px 18px; border-radius:10px;
+  font:700 15px/1 var(--font-body); padding:14px 22px; border-radius:14px;
   border:2px solid transparent; cursor:pointer; -webkit-appearance:none;
+  transition:transform .08s, box-shadow .08s;
 }
-.btn-primary{ background:var(--accent); color:var(--accent-fg); }
-.btn-ghost{ background:transparent; border-color:var(--line); color:var(--fg); }
-.btn:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
-.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.btn-primary{ background:var(--accent); color:var(--accent-fg); box-shadow:0 4px 0 var(--accent-deep); flex:1 1 200px; }
+.btn-primary:active:not(:disabled){ transform:translateY(3px); box-shadow:0 1px 0 var(--accent-deep); }
+.btn-primary.is-continue{ background:var(--success); box-shadow:0 4px 0 color-mix(in srgb, var(--success) 65%, #000); color:#fff; }
+.btn-ghost{ background:var(--surface); border-color:var(--line); color:var(--fg); box-shadow:0 3px 0 var(--line); }
+.btn-ghost:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--line); }
+.btn:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
 
-.feedback{ margin-top:14px; padding:12px 16px; border-radius:10px; font-size:13.5px; font-weight:500; }
-.feedback:empty{ display:none; padding:0; margin:0; }
+.feedback{
+  margin-top:14px; padding:12px 14px; border-radius:14px; font-size:14px; font-weight:600; line-height:1.45;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.feedback:empty{ display:none; }
+.feedback-icon{ flex:0 0 auto; width:24px; height:24px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; }
 .feedback--success{ background:var(--success-bg); color:var(--success); }
+.feedback--success .feedback-icon{ background:var(--success); }
 .feedback--warn{ background:var(--danger-bg); color:var(--danger); }
+.feedback--warn .feedback-icon{ background:var(--danger); }
 
 footer{
-  max-width:1240px; margin:8px auto 40px; font-size:12px; color:var(--fg-muted); line-height:1.6;
+  max-width:1260px; margin:8px auto 36px; font-size:12px; color:var(--fg-muted); line-height:1.6;
   padding-left:max(16px, env(safe-area-inset-left,0px));
   padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+
+/* ---------- level-cleared modal + confetti ---------- */
+.modal{
+  position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
+  background:rgba(10,16,32,.45); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+}
+.modal[hidden]{ display:none; }
+.modal-card{
+  width:min(400px,100%); background:var(--surface); border-radius:22px; padding:26px 22px 20px;
+  text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.3); animation:rise .35s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes rise{ from{ transform:translateY(18px) scale(.96); opacity:0; } to{ transform:none; opacity:1; } }
+.win-stars{ display:flex; justify-content:center; gap:6px; font-size:46px; line-height:1; }
+.win-stars span{ color:var(--star-off); display:inline-block; }
+.win-stars span.on{ color:var(--gold); animation:starIn .5s cubic-bezier(.3,1.7,.5,1) both; }
+.win-stars span:nth-child(2){ transform:translateY(-8px); }
+.win-stars span.on:nth-child(2){ animation-delay:.15s; }
+.win-stars span.on:nth-child(3){ animation-delay:.3s; }
+@keyframes starIn{ 0%{ transform:scale(0) rotate(-40deg); } 100%{ transform:scale(1) rotate(0); } }
+.win-stars span.on:nth-child(2){ animation-name:starInMid; }
+@keyframes starInMid{ 0%{ transform:translateY(-8px) scale(0) rotate(-40deg); } 100%{ transform:translateY(-8px) scale(1) rotate(0); } }
+.modal-card h3{ font:800 26px/1.1 var(--font-display); margin:16px 0 6px; letter-spacing:-.015em; }
+.modal-card p{ margin:0 auto; color:var(--fg-muted); font-size:14.5px; line-height:1.5; max-width:34ch; }
+.win-meta{ display:flex; justify-content:center; gap:8px; margin-top:14px; flex-wrap:wrap; }
+.win-meta span{ font:600 12px/1 var(--font-mono); padding:6px 10px; border-radius:999px; background:var(--surface-2); color:var(--fg-muted); }
+.modal-actions{ display:flex; gap:10px; margin-top:20px; }
+.modal-actions .btn{ flex:1; padding-inline:12px; }
+#confetti{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:60; }
+
+@media (prefers-reduced-motion:reduce){
+  *, *::before, *::after{ animation:none !important; transition:none !important; }
 }
 </style>
 
 <div class="layout" id="layout">
   <aside class="panel-sidebar">
-    <div class="kicker">IKALPRO Lab · Session 6</div>
-    <h1>Flowchart Forge</h1>
-    <p class="sub">Drag symbols into place to build each program's logic — 10 levels, easy to expert. Clear a level correctly to unlock the next.</p>
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <rect x="7" y="2" width="16" height="7" rx="3.5" fill="#fff"/>
+          <path d="M15 9v4" stroke="#fff" stroke-width="2"/>
+          <path d="M15 13l7 7-7 7-7-7z" fill="#fff" opacity=".85"/>
+        </svg>
+      </div>
+      <div>
+        <div class="kicker">IKALPRO Lab · Session 6</div>
+        <h1>Flowchart Forge</h1>
+      </div>
+    </div>
+    <p class="sub">Build each program's logic one symbol at a time. Clear a level to unlock the next, and solve it on the first check for all three stars.</p>
+
+    <div class="hud" id="hud">
+      <div class="hud-rank"><span class="hud-label">Rank</span><strong id="rankText">Flow Rookie</strong></div>
+      <div class="hud-stars" title="Stars earned"><span class="star-icon" aria-hidden="true">★</span><span id="starTotal">0</span><span class="hud-of">/30</span></div>
+      <div class="hud-progress">
+        <div class="hud-bar" role="progressbar" aria-label="Levels cleared" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="progressBar"><span id="progressFill"></span></div>
+        <div class="hud-progress-text"><span id="progressText">0 of 10 levels cleared</span><span id="nextRankText"></span></div>
+      </div>
+      <button class="sound-btn" id="soundBtn" type="button" aria-pressed="false">♪ Sound off</button>
+    </div>
+
+    <div class="map-label">Level map</div>
     <div class="tabs-carousel">
       <button class="tabs-arrow" id="tabsPrev" type="button" aria-label="Scroll to previous levels">‹</button>
-      <nav class="tabs" id="levelTabs"></nav>
+      <nav class="tabs" id="levelTabs" aria-label="Levels"></nav>
       <button class="tabs-arrow" id="tabsNext" type="button" aria-label="Scroll to next levels">›</button>
     </div>
   </aside>
 
   <section class="scenario">
+    <div class="scenario-top">
+      <span class="level-chip" id="levelChip">Level 1</span>
+      <span class="diff" id="diffPips"></span>
+      <span class="attempts" id="attemptsText"></span>
+    </div>
     <h2 id="levelTitleText"></h2>
     <p id="scenarioText"></p>
-    <p class="instruction" id="instructionText">Drag symbols into the slots, then put them in the right order. Some pieces are decoys: matching wording in the wrong shape, or a tempting wrong number. Click “Check Flow” to verify.</p>
+    <p class="instruction" id="instructionText"></p>
   </section>
 
   <aside class="panel-symbols">
+    <div class="tray" id="tray">
+      <div class="tray-head"><span class="palette-label" id="paletteLabel">Symbol tray</span><span class="tray-count" id="trayCount"></span></div>
+      <div class="palette" id="palette"></div>
+    </div>
+    <div class="dd-hint" id="ddHint" hidden>
+      <strong>Dropdown round</strong>
+      <span id="ddHintText">No dragging this time. On the canvas, pick each slot's shape and its wording separately.</span>
+    </div>
     <details class="legend" id="legend">
       <summary>Symbol reference</summary>
       <div class="legend-row" id="legendRow"></div>
     </details>
-
-    <div class="palette-label" id="paletteLabel">Symbols</div>
-    <div class="palette" id="palette"></div>
   </aside>
 
   <main class="panel-board">
-    <div class="board" id="board"></div>
+    <div class="canvas" id="canvas">
+      <div class="canvas-head">
+        <span class="canvas-title">Flow canvas</span>
+        <span class="fill-count"><span id="fillCount">0 / 0 filled</span><span class="fill-bar"><span id="fillBar"></span></span></span>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
 
     <div class="controls">
-      <button class="btn btn-primary" id="checkBtn">Check Flow</button>
-      <button class="btn btn-ghost" id="resetBtn">Reset</button>
+      <button class="btn btn-primary" id="checkBtn" type="button">Check Flow</button>
+      <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
     </div>
     <div class="feedback" id="feedback" aria-live="polite"></div>
   </main>
 </div>
 
-<footer>Built for the Computer Science &amp; Programming Algorithms Lab — Flowchart module, Session 6.</footer>
+<footer>Built for the Computer Science &amp; Programming Algorithms Lab (IKALPRO), Flowchart module, Session 6.</footer>
+
+<div class="modal" id="winModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="win-stars" id="winStars"><span>★</span><span>★</span><span>★</span></div>
+    <h3 id="winTitle">Level cleared!</h3>
+    <p id="winMsg"></p>
+    <div class="win-meta" id="winMeta"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="winStay" type="button">Review flow</button>
+      <button class="btn btn-primary" id="winNext" type="button">Next level →</button>
+    </div>
+  </div>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
 
 <script>
 (function(){
@@ -352,8 +580,8 @@ footer{
         {id:'t2', shape:'io',         text:'Input: cup, tea bag, hot water, sugar'},
         {id:'t3', shape:'process',    text:'Place the tea bag in the cup'},
         {id:'t4', shape:'process',    text:'Pour in hot water'},
-        {id:'t5', shape:'process',    text:'Stir well'},
-        {id:'t6', shape:'process',    text:'Add sugar to taste'},
+        {id:'t5', shape:'process',    text:'Add sugar to taste'},
+        {id:'t6', shape:'process',    text:'Stir well'},
         {id:'t7', shape:'terminator', text:'End'}
       ],
       decoys:[
@@ -577,11 +805,59 @@ footer{
   var state = {};
   var shuffleCache = {};
   var ddTextCache = {};
+  var lastPopped = null;
   var completed = {};
   try{
     var saved = JSON.parse(localStorage.getItem('flowforge_completed_v1') || '[]');
     saved.forEach(function(k){ completed[k] = true; });
   }catch(e){}
+
+  /* ---------- gamification state ---------- */
+  var bestStars = {};          // level key -> best star count (1-3)
+  var attempts = {};           // level key -> checks made this session (kept across Reset)
+  var soundOn = false;
+  try{ bestStars = JSON.parse(localStorage.getItem('flowforge_stars_v1') || '{}') || {}; }catch(e){ bestStars = {}; }
+  try{ soundOn = localStorage.getItem('flowforge_sound_v1') === 'on'; }catch(e){}
+
+  var RANKS = [
+    {min:0,  name:'Flow Rookie'},
+    {min:6,  name:'Symbol Sorter'},
+    {min:13, name:'Logic Builder'},
+    {min:20, name:'Branch Master'},
+    {min:27, name:'Flow Architect'}
+  ];
+
+  function starsFor(level){
+    if(bestStars[level.key]) return bestStars[level.key];
+    return completed[level.key] ? 1 : 0;
+  }
+  function totalStars(){
+    return LEVELS.reduce(function(sum, lv){ return sum + starsFor(lv); }, 0);
+  }
+  function starsFromAttempts(n){ return n <= 1 ? 3 : (n <= 3 ? 2 : 1); }
+
+  /* tiny WebAudio blips; only ever started from a click, and off by default */
+  var audioCtx = null;
+  function tone(freq, start, dur, type, vol){
+    if(!soundOn) return;
+    try{
+      if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      var t0 = audioCtx.currentTime + start;
+      var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = type || 'sine'; osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + dur + 0.02);
+    }catch(e){}
+  }
+  var sfx = {
+    place: function(){ tone(660, 0, .09, 'triangle', .1); tone(990, .05, .08, 'triangle', .07); },
+    remove: function(){ tone(420, 0, .08, 'triangle', .08); },
+    wrong: function(){ tone(220, 0, .16, 'square', .05); tone(170, .12, .22, 'square', .05); },
+    win: function(){ [523,659,784,1047].forEach(function(f,i){ tone(f, i*.09, .22, 'triangle', .11); }); }
+  };
 
   function getState(key){
     if(!state[key]) state[key] = { placements:{}, ddSel:{}, branchSel:{} };
@@ -636,12 +912,13 @@ footer{
       var placedItem = findItem(level, placedId);
       cls = shapeClass(placedItem.shape);
       inner = '<span class="sym-text">'+esc(placedItem.text)+'</span>'+
-        '<button class="remove-btn" data-remove="'+step.id+'" aria-label="Remove">×</button>';
+        '<button class="remove-btn" type="button" data-remove="'+step.id+'" aria-label="Send back to tray">×</button>';
     } else {
       cls = 'sym-empty';
-      inner = '<span class="slot-placeholder">+</span>';
+      inner = '<span class="slot-placeholder">drop here</span>';
     }
-    return '<div class="sym '+cls+' slot'+filledClass+'" data-slot="'+step.id+'">'+inner+'</div>';
+    var popClass = (lastPopped === step.id) ? ' slot--pop' : '';
+    return '<div class="sym '+cls+' slot'+filledClass+popClass+'" data-slot="'+step.id+'">'+inner+'</div>';
   }
 
   /* Dropdown-mode levels (shape and wording chosen separately, per step) share one
@@ -668,13 +945,14 @@ footer{
   function slotDropdownHTML(step, level, st){
     var sel = st.ddSel[step.id] || {};
     var filledClass = (sel.shape && sel.textId) ? ' slot--filled' : '';
+    var shapeClassName = (sel.shape ? ' '+shapeClass(sel.shape) : '') + (lastPopped === step.id ? ' slot--pop' : '');
     var shapeOpts = SYMBOLS.map(function(s){
       return '<option value="'+s.shape+'"'+(sel.shape===s.shape?' selected':'')+'>'+esc(s.label)+'</option>';
     }).join('');
     var textOpts = ddTextOptions(level).map(function(it){
       return '<option value="'+it.id+'"'+(sel.textId===it.id?' selected':'')+'>'+esc(it.text)+'</option>';
     }).join('');
-    return '<div class="dd-card'+filledClass+'" data-slot="'+step.id+'">'+
+    return '<div class="dd-card'+shapeClassName+filledClass+'" data-slot="'+step.id+'">'+
       '<select class="dd-select" data-slot="'+step.id+'" data-field="shape" aria-label="Shape for this step">'+
         '<option value="">Shape…</option>'+shapeOpts+
       '</select>'+
@@ -782,15 +1060,46 @@ footer{
     Object.keys(st.placements).forEach(function(k){ usedIds[st.placements[k]] = true; });
 
     boardEl.innerHTML = renderFlowLayout(level, st);
+    var trayCount = document.getElementById('trayCount');
     if(level.mode === 'dropdown'){
       paletteEl.innerHTML = '';
+      trayCount.textContent = '';
     } else {
       var allPieces = level.steps.concat(level.decoys || []);
-      paletteEl.innerHTML = shuffledList(allPieces, level.key)
-        .filter(function(it){ return !usedIds[it.id]; })
-        .map(pieceHTML).join('');
+      var left = shuffledList(allPieces, level.key).filter(function(it){ return !usedIds[it.id]; });
+      paletteEl.innerHTML = left.length ? left.map(pieceHTML).join('') :
+        '<span class="palette-empty">Tray empty. Every symbol is on the canvas.</span>';
+      trayCount.textContent = left.length + ' left';
     }
+    lastPopped = null;
+    updateFillCount();
     attachHandlers();
+  }
+
+  /* how many answer spots are filled: slots, plus branch directions on a chooseBranch level */
+  function fillStats(level, st){
+    var total = level.steps.length, filled = 0;
+    if(level.mode === 'dropdown'){
+      level.steps.forEach(function(it){
+        var s = st.ddSel[it.id];
+        if(s && s.shape && s.textId) filled++;
+      });
+      if(level.chooseBranch){
+        var keys = branchLegKeysFor(level);
+        total += keys.length;
+        keys.forEach(function(k){ if(st.branchSel[k]) filled++; });
+      }
+    } else {
+      level.steps.forEach(function(it){ if(st.placements[it.id]) filled++; });
+    }
+    return { filled:filled, total:total };
+  }
+
+  function updateFillCount(){
+    var level = LEVELS[currentIndex];
+    var f = fillStats(level, getState(level.key));
+    document.getElementById('fillCount').textContent = f.filled + ' / ' + f.total + ' filled';
+    document.getElementById('fillBar').style.width = (f.total ? (f.filled / f.total * 100) : 0) + '%';
   }
 
   function attachHandlers(){
@@ -804,6 +1113,7 @@ footer{
         var level = LEVELS[currentIndex];
         var st = getState(level.key);
         delete st.placements[slotId];
+        sfx.remove();
         renderBoard();
         setCheckButtonMode('check');
       });
@@ -818,8 +1128,12 @@ footer{
         if(!st.ddSel[slotId]) st.ddSel[slotId] = {};
         if(field === 'shape'){ st.ddSel[slotId].shape = e.currentTarget.value; }
         else { st.ddSel[slotId].textId = e.currentTarget.value; }
+        if(field === 'shape' && e.currentTarget.value){ lastPopped = slotId; }
+        if(e.currentTarget.value){ sfx.place(); }
         renderBoard();
         setCheckButtonMode('check');
+        var again = document.querySelector('.dd-select[data-slot="'+slotId+'"][data-field="'+field+'"]');
+        if(again){ try{ again.focus({ preventScroll:true }); }catch(err){ again.focus(); } }
       });
     }
     var ddDirs = document.querySelectorAll('.dd-dir');
@@ -829,6 +1143,8 @@ footer{
         var level = LEVELS[currentIndex];
         var st = getState(level.key);
         st.branchSel[legKey] = e.currentTarget.value;
+        if(e.currentTarget.value){ sfx.place(); }
+        updateFillCount();
         setCheckButtonMode('check');
       });
     }
@@ -917,6 +1233,8 @@ footer{
         var level = LEVELS[currentIndex];
         var st = getState(level.key);
         st.placements[slotId] = pieceId;
+        lastPopped = slotId;
+        sfx.place();
         renderBoard();
         setCheckButtonMode('check');
       }
@@ -929,25 +1247,33 @@ footer{
 
   function setFeedbackMessage(correct, total){
     var el = document.getElementById('feedback');
-    if(correct === undefined){ el.className = 'feedback'; el.textContent = ''; return; }
+    if(correct === undefined){ el.className = 'feedback'; el.innerHTML = ''; return; }
+    var msg, icon;
     if(correct === total){
       el.className = 'feedback feedback--success';
-      el.textContent = 'Complete — ' + correct + ' of ' + total + ' steps correct.';
+      icon = '✓';
+      msg = 'All ' + total + ' of ' + total + ' correct. Level cleared!';
     } else {
       el.className = 'feedback feedback--warn';
-      el.textContent = correct + ' of ' + total + ' steps correct. Review the flow yourself and try again — slots aren’t marked individually.';
+      icon = '!';
+      var gap = total - correct;
+      msg = correct + ' of ' + total + ' correct, ' + gap + (gap === 1 ? ' spot is' : ' spots are') +
+        ' still off. Spots aren’t marked one by one, so trace the flow from Start and try again.';
     }
+    el.innerHTML = '<span class="feedback-icon" aria-hidden="true">'+icon+'</span><span>'+esc(msg)+'</span>';
   }
 
   function setCheckButtonMode(mode){
     var btn = document.getElementById('checkBtn');
+    btn.classList.remove('is-continue');
     if(mode === 'continue'){
       if(currentIndex < LEVELS.length - 1){
-        btn.textContent = 'Continue →';
+        btn.textContent = 'Next level →';
         btn.disabled = false;
+        btn.classList.add('is-continue');
         btn.onclick = goToNextLevel;
       } else {
-        btn.textContent = 'All Levels Complete ✓';
+        btn.textContent = 'All 10 levels cleared ✓';
         btn.disabled = true;
         btn.onclick = null;
       }
@@ -959,14 +1285,17 @@ footer{
   }
 
   function goToNextLevel(){
+    hideWin();
     if(currentIndex < LEVELS.length - 1 && isUnlocked(currentIndex+1)){
       currentIndex++;
       renderAll();
+      var sc = document.querySelector('.scenario');
+      if(sc && sc.getBoundingClientRect().top < 0){ sc.scrollIntoView({ behavior:'smooth', block:'start' }); }
     }
   }
 
   /* For a chooseBranch level, each decision contributes two legs, keyed
-     "<decisionId>-L" (the "No" leg) and "<decisionId>-R" (the "Yes" leg) —
+     "<decisionId>-L" (the "No" leg) and "<decisionId>-R" (the "Yes" leg);
      the left/right-is-No/Yes convention is fixed across the whole app. */
   function branchLegKeysFor(level){
     if(!level.branchDecisionIds) return [];
@@ -1000,25 +1329,154 @@ footer{
         if(st.placements[it.id] === it.id){ correct++; }
       });
     }
+    attempts[level.key] = (attempts[level.key] || 0) + 1;
+    updateAttempts();
     setFeedbackMessage(correct, total);
     if(correct === total){
+      var earned = starsFromAttempts(attempts[level.key]);
+      var prevBest = starsFor(level);
+      var before = totalStars();
       completed[level.key] = true;
+      if(earned > (bestStars[level.key] || 0)){ bestStars[level.key] = earned; }
       try{ localStorage.setItem('flowforge_completed_v1', JSON.stringify(Object.keys(completed))); }catch(e){}
+      try{ localStorage.setItem('flowforge_stars_v1', JSON.stringify(bestStars)); }catch(e){}
+      var after = totalStars();
       renderTabs();
+      renderHud();
       setCheckButtonMode('continue');
+      sfx.win();
+      showWin(level, earned, attempts[level.key], prevBest, rankFor(before) !== rankFor(after) ? rankFor(after) : null);
+      burstConfetti();
     } else {
       setCheckButtonMode('check');
+      sfx.wrong();
+      var cv = document.getElementById('canvas');
+      cv.classList.remove('shake'); void cv.offsetWidth; cv.classList.add('shake');
     }
   }
 
+  /* ---------- HUD ---------- */
+  function rankFor(stars){
+    var r = RANKS[0];
+    RANKS.forEach(function(x){ if(stars >= x.min) r = x; });
+    return r.name;
+  }
+  function renderHud(){
+    var stars = totalStars();
+    var cleared = LEVELS.filter(function(lv){ return completed[lv.key]; }).length;
+    document.getElementById('starTotal').textContent = stars;
+    document.getElementById('rankText').textContent = rankFor(stars);
+    document.getElementById('progressFill').style.width = (cleared / LEVELS.length * 100) + '%';
+    document.getElementById('progressBar').setAttribute('aria-valuenow', cleared);
+    document.getElementById('progressText').textContent = cleared + ' of ' + LEVELS.length + ' levels cleared';
+    var next = RANKS.filter(function(x){ return x.min > stars; })[0];
+    document.getElementById('nextRankText').textContent = next ? ('★' + (next.min - stars) + ' to ' + next.name) : 'Top rank';
+  }
+  function updateAttempts(){
+    var level = LEVELS[currentIndex];
+    var n = attempts[level.key] || 0;
+    var best = bestStars[level.key];
+    var parts = [];
+    parts.push(n === 0 ? 'No checks yet' : (n + (n === 1 ? ' check' : ' checks')));
+    if(best){ parts.push('best ' + '★★★'.slice(0, best)); }
+    document.getElementById('attemptsText').textContent = parts.join(' · ');
+  }
+
+  /* ---------- level-cleared modal ---------- */
+  var WIN_LINES = {
+    3:'First check, no mistakes. That’s a clean flow.',
+    2:'Solid work. Clear it on the first check next time for the third star.',
+    1:'Cleared! Replay it later and aim for fewer checks to earn more stars.'
+  };
+  var lastFocus = null;
+  function showWin(level, earned, n, prevBest, newRank){
+    var stars = document.querySelectorAll('#winStars span');
+    for(var i=0;i<stars.length;i++){
+      stars[i].className = '';
+      void stars[i].offsetWidth;
+      if(i < earned) stars[i].className = 'on';
+    }
+    document.getElementById('winStars').setAttribute('aria-label', earned + ' of 3 stars');
+    var isLast = currentIndex >= LEVELS.length - 1;
+    document.getElementById('winTitle').textContent = isLast ? 'You finished every level!' : 'Level ' + (currentIndex+1) + ' cleared!';
+    document.getElementById('winMsg').textContent = WIN_LINES[earned];
+    var meta = [n + (n === 1 ? ' check' : ' checks'), '★ ' + totalStars() + ' / 30 total'];
+    if(newRank){ meta.push('New rank: ' + newRank); }
+    else if(prevBest && earned > prevBest){ meta.push('New best!'); }
+    document.getElementById('winMeta').innerHTML = meta.map(function(m){ return '<span>'+esc(m)+'</span>'; }).join('');
+    var nextBtn = document.getElementById('winNext');
+    nextBtn.hidden = isLast;
+    document.getElementById('winStay').textContent = isLast ? 'Close' : 'Review flow';
+    lastFocus = document.activeElement;
+    document.getElementById('winModal').hidden = false;
+    (isLast ? document.getElementById('winStay') : nextBtn).focus();
+  }
+  function hideWin(){
+    var m = document.getElementById('winModal');
+    if(m.hidden) return;
+    m.hidden = true;
+    if(lastFocus && lastFocus.focus){ try{ lastFocus.focus({ preventScroll:true }); }catch(e){} }
+  }
+  document.getElementById('winNext').addEventListener('click', goToNextLevel);
+  document.getElementById('winStay').addEventListener('click', hideWin);
+  document.getElementById('winModal').addEventListener('click', function(e){ if(e.target === e.currentTarget) hideWin(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hideWin(); });
+
+  /* ---------- confetti, in the four symbol colors plus gold ---------- */
+  function burstConfetti(){
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cv = document.getElementById('confetti');
+    var ctx = cv.getContext && cv.getContext('2d');
+    if(!ctx) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = window.innerWidth, H = window.innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var css = getComputedStyle(document.documentElement);
+    var colors = ['--term','--io','--proc','--dec','--gold'].map(function(v){ return css.getPropertyValue(v).trim() || '#f5b301'; });
+    var parts = [];
+    for(var i=0;i<140;i++){
+      var fromLeft = i % 2 === 0;
+      parts.push({
+        x: fromLeft ? -10 : W + 10, y: H * (0.55 + Math.random()*0.25),
+        vx: (fromLeft ? 1 : -1) * (4 + Math.random()*7), vy: -(8 + Math.random()*9),
+        w: 6 + Math.random()*6, h: 4 + Math.random()*5, r: Math.random()*6.28, vr: (Math.random()-.5)*.35,
+        c: colors[i % colors.length], shape: i % 3
+      });
+    }
+    var t0 = null;
+    function frame(ts){
+      if(t0 === null) t0 = ts;
+      var el = ts - t0;
+      ctx.clearRect(0, 0, W, H);
+      parts.forEach(function(p){
+        p.vy += 0.32; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+        ctx.globalAlpha = Math.max(0, 1 - el / 2600);
+        if(p.shape === 0){ ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); }
+        else if(p.shape === 1){ ctx.beginPath(); ctx.moveTo(0,-p.w/2); ctx.lineTo(p.w/2,0); ctx.lineTo(0,p.w/2); ctx.lineTo(-p.w/2,0); ctx.closePath(); ctx.fill(); }
+        else { ctx.beginPath(); ctx.arc(0, 0, p.h/1.6, 0, 6.28); ctx.fill(); }
+        ctx.restore();
+      });
+      if(el < 2600){ requestAnimationFrame(frame); } else { ctx.clearRect(0, 0, W, H); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- level map ---------- */
   function renderTabs(){
     var nav = document.getElementById('levelTabs');
     nav.innerHTML = LEVELS.map(function(lv, i){
       var unlocked = isUnlocked(i);
-      var cls = 'tab' + (i===currentIndex?' tab--active':'') + (!unlocked?' tab--locked':'');
-      var mark = completed[lv.key] ? '<span class="tab-check">✓</span>' : (!unlocked ? '<span class="tab-lock">'+LOCK_SVG+'</span>' : '');
-      return '<button class="'+cls+'" data-index="'+i+'"'+(!unlocked?' disabled aria-disabled="true"':'')+'>'+
-        '<span class="tab-num">'+(i+1)+'</span><span class="tab-title">'+esc(lv.title)+'</span>'+mark+
+      var done = !!completed[lv.key];
+      var cls = 'tab' + (i===currentIndex?' tab--active':'') + (!unlocked?' tab--locked':'') + (done?' tab--done':'');
+      var s = starsFor(lv);
+      var starsRow = done ? '<span class="tab-stars" aria-label="'+s+' of 3 stars"><span class="on">'+'★★★'.slice(0,s)+'</span>'+'★★★'.slice(0,3-s)+'</span>' : '';
+      var lock = !unlocked ? '<span class="tab-lock">'+LOCK_SVG+'</span>' : '';
+      return '<button type="button" class="'+cls+'" data-index="'+i+'"'+(!unlocked?' disabled aria-disabled="true"':'')+
+        (i===currentIndex?' aria-current="step"':'')+'>'+
+        '<span class="tab-num">'+(done ? '✓' : (i+1))+'</span>'+
+        '<span class="tab-body"><span class="tab-title">'+esc(lv.title)+'</span>'+starsRow+'</span>'+lock+
         '</button>';
     }).join('');
     var tabs = nav.querySelectorAll('.tab');
@@ -1031,7 +1489,10 @@ footer{
       });
     }
     var activeTab = nav.querySelector('.tab--active');
-    if(activeTab){ activeTab.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'nearest' }); }
+    if(activeTab && nav.scrollWidth > nav.clientWidth + 2){
+      var target = activeTab.offsetLeft - (nav.clientWidth - activeTab.offsetWidth) / 2;
+      try{ nav.scrollTo({ left:Math.max(0, target), behavior:'smooth' }); }catch(e){ nav.scrollLeft = Math.max(0, target); }
+    }
   }
 
   function renderLegendOnce(){
@@ -1042,20 +1503,33 @@ footer{
     }).join('');
   }
 
-  var DRAG_INSTRUCTION = 'Drag symbols into the slots, then put them in the right order. Some pieces are decoys: matching wording in the wrong shape, or a tempting wrong number. Click “Check Flow” to verify.';
-  var DD_INSTRUCTION = 'For each slot, pick its shape and its wording from the dropdowns — separately. Some wordings are decoys: a tempting near-miss number or condition. Click “Check Flow” to verify.';
-  var DD_BRANCH_INSTRUCTION = 'For each slot, pick its shape and wording from the dropdowns, and pick No/Yes for each branch — the labels have been removed, so work out which leg is which. Click “Check Flow” to verify.';
+  var DRAG_INSTRUCTION = 'Drag symbols from the tray into the slots. Some are decoys: the right wording in the wrong shape, or a tempting wrong number. Tap a placed symbol’s × to send it back.';
+  var DD_INSTRUCTION = 'Pick each slot’s shape and its wording from the two dropdowns. The slot changes shape as you choose. Some wordings are near-miss decoys.';
+  var DD_BRANCH_INSTRUCTION = 'Pick each slot’s shape and wording, then set every branch to No or Yes. The labels are gone, so work out which leg is which.';
 
   function renderAll(){
     var level = LEVELS[currentIndex];
     document.getElementById('levelTitleText').textContent = level.title;
     document.getElementById('scenarioText').textContent = level.scenario;
+    document.getElementById('levelChip').textContent = level.badge;
+    var tier = Math.ceil((currentIndex + 1) / 2);
+    var pips = '';
+    for(var p=1;p<=5;p++){ pips += '<i class="'+(p<=tier?'on':'')+'"></i>'; }
+    var diffEl = document.getElementById('diffPips');
+    diffEl.innerHTML = pips + '<span>' + ['Warm-up','Easy','Medium','Hard','Expert'][tier-1] + '</span>';
+    diffEl.setAttribute('aria-label', 'Difficulty ' + tier + ' of 5');
     var isDropdown = level.mode === 'dropdown';
     document.getElementById('instructionText').textContent = !isDropdown ? DRAG_INSTRUCTION :
       (level.chooseBranch ? DD_BRANCH_INSTRUCTION : DD_INSTRUCTION);
-    document.getElementById('paletteLabel').style.display = isDropdown ? 'none' : '';
+    document.getElementById('tray').hidden = isDropdown;
+    document.getElementById('ddHint').hidden = !isDropdown;
+    document.getElementById('ddHintText').textContent = level.chooseBranch ?
+      'No dragging this time. On the canvas, pick each slot’s shape and wording, and choose No or Yes for every branch.' :
+      'No dragging this time. On the canvas, pick each slot’s shape and its wording separately.';
     renderTabs();
     renderBoard();
+    renderHud();
+    updateAttempts();
     setFeedbackMessage();
     setCheckButtonMode('check');
   }
@@ -1065,9 +1539,22 @@ footer{
     delete state[level.key];
     delete shuffleCache[level.key];
     delete ddTextCache[level.key];
+    sfx.remove();
     renderBoard();
     setFeedbackMessage();
     setCheckButtonMode('check');
+  });
+
+  function renderSoundBtn(){
+    var b = document.getElementById('soundBtn');
+    b.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    b.textContent = soundOn ? '♪ Sound on' : '♪ Sound off';
+  }
+  document.getElementById('soundBtn').addEventListener('click', function(){
+    soundOn = !soundOn;
+    try{ localStorage.setItem('flowforge_sound_v1', soundOn ? 'on' : 'off'); }catch(e){}
+    renderSoundBtn();
+    sfx.place();
   });
 
   document.getElementById('tabsPrev').addEventListener('click', function(){
@@ -1079,6 +1566,10 @@ footer{
     el.scrollBy({ left: Math.max(160, el.clientWidth * 0.75), behavior: 'smooth' });
   });
 
+  /* open on the first level that isn't cleared yet */
+  for(var s=0;s<LEVELS.length;s++){ if(!completed[LEVELS[s].key]){ currentIndex = s; break; } }
+
+  renderSoundBtn();
   renderLegendOnce();
   renderAll();
 })();
